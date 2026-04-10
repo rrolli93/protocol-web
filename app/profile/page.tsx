@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient, Challenge, MOCK_CHALLENGES, PILLARS } from '@/lib/supabase'
 import AuthGuard from '@/app/components/AuthGuard'
@@ -17,7 +17,7 @@ interface Profile {
   streak?: number
 }
 
-export default function ProfilePage() {
+function ProfilePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -271,5 +271,13 @@ export default function ProfilePage() {
         </div>
       </div>
     </AuthGuard>
+  )
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <ProfilePageInner />
+    </Suspense>
   )
 }
