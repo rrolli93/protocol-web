@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient, Challenge, MOCK_CHALLENGES, PILLARS } from '@/lib/supabase'
 import AuthGuard from '@/app/components/AuthGuard'
 import ChallengeCard from '@/app/components/ChallengeCard'
 import StatsRow from '@/app/components/StatsRow'
+import { buildStravaAuthUrl } from '@/lib/strava'
 
 interface Profile {
   id: string
@@ -18,9 +19,15 @@ interface Profile {
 
 export default function ProfilePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [challenges, setChallenges] = useState<Challenge[]>([])
   const [loading, setLoading] = useState(true)
+  const [stravaConnected, setStravaConnected] = useState(false)
+  const [stravaLoading, setStravaLoading] = useState(false)
+
+  // Check if just redirected from Strava
+  const stravaParam = searchParams.get('strava')
 
   useEffect(() => {
     async function load() {
@@ -43,6 +50,15 @@ export default function ProfilePage() {
           display_name: session.user.email?.split('@')[0],
         })
       }
+
+      // Check Strava connection
+      const { data: integration } = await supabase
+        .from('user_integrations')
+        .select('connected')
+        .eq('user_id', session.user.id)
+        .eq('provider', 'strava')
+        .single()
+      setStravaConnected(integration?.connected === true)
 
       // Active challenges
       const { data: parts } = await supabase
@@ -127,21 +143,52 @@ export default function ProfilePage() {
                 >
                   INTEGRATIONS
                 </h2>
+                {stravaParam === 'connected' && (
+                  <div className="mb-3 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: '#00FF8722', color: '#00FF87', fontFamily: "'JetBrains Mono', monospace" }}>
+                    ✓ Strava connected successfully
+                  </div>
+                )}
+                {stravaParam === 'error' && (
+                  <div className="mb-3 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: '#FF475722', color: '#FF4757', fontFamily: "'JetBrains Mono', monospace" }}>
+                    ✗ Strava connection failed. Try again.
+                  </div>
+                )}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
                       <span className="text-xl">🟠</span>
                       <div>
                         <p className="text-sm font-medium" style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}>Strava</p>
-                        <p className="text-xs" style={{ color: '#8888AA' }}>Auto-track workouts</p>
+                        <p className="text-xs" style={{ color: stravaConnected ? '#00FF87' : '#8888AA' }}>
+                          {stravaConnected ? 'Connected — workouts synced' : 'Auto-track workouts'}
+                        </p>
                       </div>
                     </div>
-                    <button
-                      className="px-3 py-1 rounded-lg text-xs border transition-colors"
-                      style={{ color: '#FC4C02', borderColor: '#FC4C0233', fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      Coming Soon
-                    </button>
+                    {stravaConnected ? (
+                      <span
+                        className="px-3 py-1 rounded-lg text-xs"
+                        style={{ color: '#00FF87', backgroundColor: '#00FF8722', fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        ✓ Connected
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setStravaLoading(true)
+                          window.location.href = buildStravaAuthUrl()
+                        }}
+                        disabled={stravaLoading}
+                        className="px-3 py-1 rounded-lg text-xs border transition-all active:scale-95"
+                        style={{
+                          color: stravaLoading ? '#8888AA' : '#FC4C02',
+                          borderColor: stravaLoading ? '#8888AA33' : '#FC4C0255',
+                          backgroundColor: stravaLoading ? 'transparent' : '#FC4C0211',
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      >
+                        {stravaLoading ? 'Connecting...' : 'Connect'}
+                      </button>
+                    )}
                   </div>
                   <div
                     className="h-px"
