@@ -1,6 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://zxfzivelglmewzlmvsbp.supabase.co'
+const supabaseUrl = 'https://zxfzivelglmewzlmvsbp.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4ZnppdmVsZ2xtZXd6bG12c2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDM4NzMsImV4cCI6MjA5MTQxOTg3M30.QIzifYDtFFdf520YrTGgylP7XrFc20LSkyTSLSHcQwk'
 
 // Browser client for Client Components
