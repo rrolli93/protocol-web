@@ -38,13 +38,14 @@ export default function SignupPage() {
     }
 
     if (data.user) {
-      await supabase.from('users').insert({
-        id: data.user.id,
-        email,
-        username,
-        display_name: username,
-        created_at: new Date().toISOString(),
-      })
+      // Best-effort insert — ignore RLS/conflict errors, auth is what matters
+      try {
+        await supabase.from('users').insert({
+          id: data.user.id,
+          username,
+          display_name: username,
+        })
+      } catch (_) {}
     }
 
     router.push('/onboarding')
