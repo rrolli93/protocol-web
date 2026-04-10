@@ -1,7 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://udlyqhqjwxuiuhcgirqv.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkbHlxaHFqd3h1aXVoY2dpcnF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjA2MzYsImV4cCI6MjA5MTM5NjYzNn0.bDkFBH4NSPcAQj1z1FwBL9sFn5-FdAibZ5QAdLwTOco'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://zxfzivelglmewzlmvsbp.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4ZnppdmVsZ2xtZXd6bG12c2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDM4NzMsImV4cCI6MjA5MTQxOTg3M30.QIzifYDtFFdf520YrTGgylP7XrFc20LSkyTSLSHcQwk'
 
 // Browser client for Client Components
 export function createClient() {
