@@ -1,65 +1,106 @@
-import Image from "next/image";
+import Link from 'next/link'
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main
+      className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-4"
+      style={{ backgroundColor: '#0A0A0F' }}
+    >
+      {/* Radial glow */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: '600px',
+          height: '600px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%)',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center gap-8 max-w-lg w-full text-center">
+        {/* Logo */}
+        <div>
+          <h1
+            className="text-5xl md:text-7xl font-black tracking-[0.25em] select-none"
+            style={{
+              color: '#6C63FF',
+              fontFamily: "'JetBrains Mono', monospace",
+              textShadow: '0 0 40px rgba(108,99,255,0.5)',
+            }}
+          >
+            ⬡ PROTOCOL
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p
+            className="mt-4 text-lg md:text-2xl font-light tracking-widest"
+            style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
+          >
+            Bet on yourself.
+          </p>
+          <p className="mt-3 text-sm md:text-base" style={{ color: '#8888AA' }}>
+            Stake real money on your fitness goals. Win when you succeed.
+            Lose when you don't. No excuses.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {/* Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+          <Link
+            href="/signup"
+            className="flex-1 py-3 rounded-xl text-center font-semibold text-base transition-all hover:opacity-90 active:scale-95"
+            style={{
+              backgroundColor: '#6C63FF',
+              color: '#ffffff',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Get Started
+          </Link>
+          <Link
+            href="/login"
+            className="flex-1 py-3 rounded-xl text-center font-semibold text-base border transition-all hover:border-purple-500 hover:text-white active:scale-95"
+            style={{
+              backgroundColor: 'transparent',
+              color: '#8888AA',
+              borderColor: '#1A1A2E',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
           >
-            Documentation
-          </a>
+            Sign In
+          </Link>
         </div>
-      </main>
-    </div>
-  );
+
+        {/* Pills */}
+        <div className="flex flex-wrap justify-center gap-2">
+          {[
+            { emoji: '🏃', label: 'Run' },
+            { emoji: '⚡', label: 'Fast' },
+            { emoji: '😴', label: 'Sleep' },
+            { emoji: '🧘', label: 'Meditate' },
+          ].map(p => (
+            <span
+              key={p.label}
+              className="px-4 py-1.5 rounded-full text-sm font-medium"
+              style={{
+                backgroundColor: 'rgba(108,99,255,0.1)',
+                color: '#6C63FF',
+                border: '1px solid rgba(108,99,255,0.2)',
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              {p.emoji} {p.label}
+            </span>
+          ))}
+        </div>
+
+        {/* Bottom copy */}
+        <p className="text-xs" style={{ color: '#8888AA' }}>
+          Join thousands of challengers. Powered by USDC.
+        </p>
+      </div>
+    </main>
+  )
 }
