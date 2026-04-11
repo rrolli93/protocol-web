@@ -14,7 +14,7 @@ interface ChallengeCardProps {
 
 export default function ChallengeCard({ challenge, showJoin, onJoin, compact }: ChallengeCardProps) {
   const pillar = PILLARS.find(p => p.key === challenge.pillar?.toLowerCase())
-  const emoji = pillar?.emoji ?? '🏆'
+  const emoji = challenge.cover_emoji || pillar?.emoji || '🏆'
   const progress = challenge.progress ?? 0
   const participants = challenge.participants_count ?? 0
   const pot = challenge.pot_amount ?? (challenge.stake_per_user ?? 0) * participants
