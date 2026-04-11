@@ -21,6 +21,7 @@ function ProfilePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [authUserId, setAuthUserId] = useState<string>('')
   const [challenges, setChallenges] = useState<Challenge[]>([])
   const [loading, setLoading] = useState(true)
   const [stravaConnected, setStravaConnected] = useState(false)
@@ -34,6 +35,7 @@ function ProfilePageInner() {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
+      setAuthUserId(session.user.id)
 
       const { data: p } = await supabase
         .from('users')
@@ -173,10 +175,11 @@ function ProfilePageInner() {
                     ) : (
                       <button
                         onClick={() => {
+                          if (!authUserId) return
                           setStravaLoading(true)
-                          window.location.href = buildStravaAuthUrl(profile?.id ?? '')
+                          window.location.href = buildStravaAuthUrl(authUserId)
                         }}
-                        disabled={stravaLoading}
+                        disabled={stravaLoading || !authUserId}
                         className="px-3 py-1 rounded-lg text-xs border transition-all active:scale-95"
                         style={{
                           color: stravaLoading ? '#8888AA' : '#FC4C02',
