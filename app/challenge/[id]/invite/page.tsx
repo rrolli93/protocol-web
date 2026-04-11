@@ -110,7 +110,7 @@ export default function ChallengeInvitePage() {
     // Fetch challenge — use start_date/end_date columns as per task spec
     const { data: c, error } = await supabase
       .from('challenges')
-      .select('id, title, description, pillar, stake_per_user, start_date, end_date, starts_at, ends_at, status, goal_value, goal_unit, goal_frequency, created_by, creator_id')
+      .select('id, title, description, pillar, stake_per_user, starts_at, ends_at, status, goal_value, goal_unit, goal_frequency, creator_id, cover_emoji, max_participants')
       .eq('id', id)
       .single()
 
