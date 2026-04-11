@@ -51,14 +51,13 @@ function ProfilePageInner() {
         })
       }
 
-      // Check Strava connection
-      const { data: integration } = await supabase
-        .from('user_integrations')
-        .select('connected')
-        .eq('user_id', session.user.id)
-        .eq('provider', 'strava')
+      // Check Strava connection via users table flag
+      const { data: stravaCheck } = await supabase
+        .from('users')
+        .select('strava_connected')
+        .eq('id', session.user.id)
         .single()
-      setStravaConnected(integration?.connected === true)
+      setStravaConnected(stravaCheck?.strava_connected === true)
 
       // Active challenges
       const { data: parts } = await supabase

@@ -10,22 +10,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
-  const state = searchParams.get('state');
+  const state = searchParams.get('state'); // user_id
 
-  console.log('[strava-callback] code:', code ? 'present' : 'missing');
-  console.log('[strava-callback] state:', state ?? 'MISSING');
-  console.log('[strava-callback] error:', error ?? 'none');
-  console.log('[strava-callback] STRAVA_CLIENT_ID:', STRAVA_CLIENT_ID ?? 'MISSING');
-  console.log('[strava-callback] STRAVA_CLIENT_SECRET:', STRAVA_CLIENT_SECRET ? 'present' : 'MISSING');
-  console.log('[strava-callback] SUPABASE_SERVICE_KEY:', SUPABASE_SERVICE_KEY ? 'present' : 'MISSING');
-
-  if (error || !code) {
-    console.log('[strava-callback] early exit: error or no code');
+  if (error || !code || !state) {
     return NextResponse.redirect(new URL('/profile?strava=error', request.url));
   }
-
-  // Don't block on missing state — just use a fallback
-  const userId = state ?? '';
 
   // Exchange code for tokens
   const tokenRes = await fetch('https://www.strava.com/oauth/token', {
@@ -39,36 +28,30 @@ export async function GET(request: NextRequest) {
     }),
   });
 
-  const tokenBody = await tokenRes.text();
-  console.log('[strava-callback] token exchange status:', tokenRes.status);
-  console.log('[strava-callback] token exchange body:', tokenBody);
-
   if (!tokenRes.ok) {
     return NextResponse.redirect(new URL('/profile?strava=error', request.url));
   }
 
-  const tokens = JSON.parse(tokenBody);
+  const tokens = await tokenRes.json();
 
-  if (!userId) {
-    console.log('[strava-callback] no userId in state — cannot save');
-    return NextResponse.redirect(new URL('/profile?strava=error', request.url));
-  }
-
-  // Use service role to write — no session cookie needed
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  const { error: dbError } = await supabase.from('user_integrations').upsert({
-    user_id: userId,
+  // Upsert using actual schema columns
+  await supabase.from('user_integrations').upsert({
+    user_id: state,
     provider: 'strava',
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,
-    token_expires_at: new Date(tokens.expires_at * 1000).toISOString(),
-    athlete_id: tokens.athlete?.id?.toString(),
-    connected: true,
+    expires_at: new Date(tokens.expires_at * 1000).toISOString(),
+    scope: tokens.token_type,
+    provider_user_id: tokens.athlete?.id?.toString(),
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id,provider' });
 
-  console.log('[strava-callback] db upsert error:', dbError ?? 'none');
+  // Also mark strava_connected on users table
+  await supabase.from('users')
+    .update({ strava_connected: true, updated_at: new Date().toISOString() })
+    .eq('id', state);
 
   return NextResponse.redirect(new URL('/profile?strava=connected', request.url));
 }
