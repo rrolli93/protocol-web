@@ -1,9 +1,7 @@
 // Strava OAuth helpers — secret is server-side only
 
-export const STRAVA_CLIENT_ID = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID ?? '223306';
-const REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL
-  ? `${process.env.NEXT_PUBLIC_APP_URL}/api/strava/callback`
-  : 'https://protocol-web-theta.vercel.app/api/strava/callback';
+export const STRAVA_CLIENT_ID = '223306';
+const REDIRECT_URI = 'https://protocol-web-theta.vercel.app/api/strava/callback';
 
 export function buildStravaAuthUrl(): string {
   const params = new URLSearchParams({
