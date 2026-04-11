@@ -48,14 +48,13 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
       }
       setChallenge(challengeData)
 
-      // Fetch participants
+      // Fetch participants with current_score
       const { data: parts } = await supabase
         .from('challenge_participants')
-        .select('user_id, progress, joined_at')
+        .select('user_id, current_score, joined_at')
         .eq('challenge_id', id)
 
       if (parts && parts.length > 0) {
-        // Fetch usernames
         const userIds = parts.map((p: { user_id: string }) => p.user_id)
         const { data: users } = await supabase
           .from('users')
@@ -68,10 +67,21 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
           users.forEach((u: any) => { userMap[u.id] = u.username })
         }
 
+        // Compute progress % from current_score vs goal
+        const ch = challengeData
+        const totalDays = ch.duration_days ?? 30
+        const goalTotal = (ch.goal_value ?? 0) * totalDays
+        const elapsedDays = ch.starts_at
+          ? Math.min(totalDays, (Date.now() - new Date(ch.starts_at).getTime()) / (1000 * 60 * 60 * 24))
+          : totalDays
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const enriched = parts.map((p: any) => ({
           ...p,
           username: userMap[p.user_id] ?? 'challenger',
+          progress: goalTotal > 0
+            ? Math.min(100, Math.round((Number(p.current_score || 0) / goalTotal) * 100))
+            : Math.min(100, Math.round((elapsedDays / totalDays) * 100)),
         }))
 
         enriched.sort((a: Participant, b: Participant) => b.progress - a.progress)
@@ -83,7 +93,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
           setMyProgress(myPart.progress)
         }
       } else {
-        // Mock participants
+        // Mock participants when no real data
         setParticipants([
           { user_id: 'a', progress: 85, joined_at: '', username: 'alex_runs' },
           { user_id: 'b', progress: 62, joined_at: '', username: 'fitnessbro' },
@@ -105,8 +115,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
     await supabase.from('challenge_participants').insert({
       challenge_id: id,
       user_id: session.user.id,
-      progress: 0,
-      joined_at: new Date().toISOString(),
+      current_score: 0,
     })
 
     setIsParticipating(true)

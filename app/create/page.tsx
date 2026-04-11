@@ -60,10 +60,9 @@ export default function CreatePage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const challenge = data as any
     await supabase.from('challenge_participants').insert({
-      challenge_id: challenge.id,
+      challenge_id: challenge.id as string,
       user_id: session.user.id,
-      progress: 0,
-      joined_at: new Date().toISOString(),
+      current_score: 0,
     })
 
     router.push(`/challenge/${challenge.id}`)

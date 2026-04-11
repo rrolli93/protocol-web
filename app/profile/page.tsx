@@ -26,6 +26,8 @@ function ProfilePageInner() {
   const [loading, setLoading] = useState(true)
   const [stravaConnected, setStravaConnected] = useState(false)
   const [stravaLoading, setStravaLoading] = useState(false)
+  const [syncLoading, setSyncLoading] = useState(false)
+  const [syncResult, setSyncResult] = useState<string | null>(null)
 
   // Check if just redirected from Strava
   const stravaParam = searchParams.get('strava')
@@ -84,6 +86,29 @@ function ProfilePageInner() {
     }
     load()
   }, [])
+
+  async function handleStravaSync() {
+    if (!authUserId) return
+    setSyncLoading(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: authUserId }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        const synced = data.results?.[0]?.activities_synced ?? 0
+        setSyncResult(`✓ Synced ${synced} new activit${synced === 1 ? 'y' : 'ies'}`)
+      } else {
+        setSyncResult(`✗ ${data.error ?? 'Sync failed'}`)
+      }
+    } catch {
+      setSyncResult('✗ Sync request failed')
+    }
+    setSyncLoading(false)
+  }
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -144,6 +169,18 @@ function ProfilePageInner() {
                 >
                   INTEGRATIONS
                 </h2>
+                {syncResult && (
+                  <div
+                    className="mb-3 px-3 py-2 rounded-lg text-xs"
+                    style={{
+                      backgroundColor: syncResult.startsWith('✓') ? '#00FF8722' : '#FF475722',
+                      color: syncResult.startsWith('✓') ? '#00FF87' : '#FF4757',
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {syncResult}
+                  </div>
+                )}
                 {stravaParam === 'connected' && (
                   <div className="mb-3 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: '#00FF8722', color: '#00FF87', fontFamily: "'JetBrains Mono', monospace" }}>
                     ✓ Strava connected successfully
@@ -166,12 +203,27 @@ function ProfilePageInner() {
                       </div>
                     </div>
                     {stravaConnected ? (
-                      <span
-                        className="px-3 py-1 rounded-lg text-xs"
-                        style={{ color: '#00FF87', backgroundColor: '#00FF8722', fontFamily: "'JetBrains Mono', monospace" }}
-                      >
-                        ✓ Connected
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleStravaSync}
+                          disabled={syncLoading}
+                          className="px-3 py-1 rounded-lg text-xs border transition-all"
+                          style={{
+                            color: syncLoading ? '#8888AA' : '#00FF87',
+                            borderColor: syncLoading ? '#8888AA33' : '#00FF8733',
+                            backgroundColor: 'transparent',
+                            fontFamily: "'JetBrains Mono', monospace",
+                          }}
+                        >
+                          {syncLoading ? '⟳ Syncing...' : '⟳ Sync'}
+                        </button>
+                        <span
+                          className="px-3 py-1 rounded-lg text-xs"
+                          style={{ color: '#00FF87', backgroundColor: '#00FF8722', fontFamily: "'JetBrains Mono', monospace" }}
+                        >
+                          ✓ Connected
+                        </span>
+                      </div>
                     ) : (
                       <button
                         onClick={() => {
