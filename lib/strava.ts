@@ -3,13 +3,14 @@
 export const STRAVA_CLIENT_ID = '223306';
 const REDIRECT_URI = 'https://protocol-web-theta.vercel.app/api/strava/callback';
 
-export function buildStravaAuthUrl(): string {
+export function buildStravaAuthUrl(userId: string): string {
   const params = new URLSearchParams({
     client_id: STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: 'code',
     approval_prompt: 'auto',
     scope: 'activity:read_all',
+    state: userId, // passed back in callback so we know which user to save
   });
   return `https://www.strava.com/oauth/authorize?${params.toString()}`;
 }

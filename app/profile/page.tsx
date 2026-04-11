@@ -175,7 +175,7 @@ function ProfilePageInner() {
                       <button
                         onClick={() => {
                           setStravaLoading(true)
-                          window.location.href = buildStravaAuthUrl()
+                          window.location.href = buildStravaAuthUrl(profile?.id ?? '')
                         }}
                         disabled={stravaLoading}
                         className="px-3 py-1 rounded-lg text-xs border transition-all active:scale-95"

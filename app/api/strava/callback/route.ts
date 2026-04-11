@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 
 const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID!;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
+  const state = searchParams.get('state'); // user_id passed via state param
 
-  if (error || !code) {
+  if (error || !code || !state) {
     return NextResponse.redirect(new URL('/profile?strava=error', request.url));
   }
 
@@ -32,27 +34,11 @@ export async function GET(request: NextRequest) {
 
   const tokens = await tokenRes.json();
 
-  // Save to Supabase
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) { return cookieStore.get(name)?.value; },
-        set(name: string, value: string, options: Record<string, unknown>) { cookieStore.set({ name, value, ...options }); },
-        remove(name: string, options: Record<string, unknown>) { cookieStore.set({ name, value: '', ...options }); },
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  // Use service role to write — no session cookie needed
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
   await supabase.from('user_integrations').upsert({
-    user_id: user.id,
+    user_id: state,
     provider: 'strava',
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,
