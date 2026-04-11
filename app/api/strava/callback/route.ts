@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const maxDuration = 10; // 10s timeout for Vercel
+
 const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID!;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,33 +12,42 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
-  const state = searchParams.get('state'); // user_id
+  const state = searchParams.get('state');
 
   if (error || !code || !state) {
-    return NextResponse.redirect(new URL('/profile?strava=error', request.url));
+    return NextResponse.redirect(new URL('/profile?strava=error&reason=missing_params', request.url));
   }
 
-  // Exchange code for tokens
-  const tokenRes = await fetch('https://www.strava.com/oauth/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id: STRAVA_CLIENT_ID,
-      client_secret: STRAVA_CLIENT_SECRET,
-      code,
-      grant_type: 'authorization_code',
-    }),
-  });
+  // Exchange code for tokens with explicit timeout
+  let tokens;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
-  if (!tokenRes.ok) {
-    return NextResponse.redirect(new URL('/profile?strava=error', request.url));
+    const tokenRes = await fetch('https://www.strava.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: STRAVA_CLIENT_ID,
+        client_secret: STRAVA_CLIENT_SECRET,
+        code,
+        grant_type: 'authorization_code',
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!tokenRes.ok) {
+      const body = await tokenRes.text();
+      return NextResponse.redirect(new URL(`/profile?strava=error&reason=token_${tokenRes.status}`, request.url));
+    }
+    tokens = await tokenRes.json();
+  } catch (e) {
+    return NextResponse.redirect(new URL('/profile?strava=error&reason=fetch_failed', request.url));
   }
-
-  const tokens = await tokenRes.json();
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  // Upsert using actual schema columns
   await supabase.from('user_integrations').upsert({
     user_id: state,
     provider: 'strava',
@@ -48,7 +59,6 @@ export async function GET(request: NextRequest) {
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id,provider' });
 
-  // Also mark strava_connected on users table
   await supabase.from('users')
     .update({ strava_connected: true, updated_at: new Date().toISOString() })
     .eq('id', state);
