@@ -7,6 +7,7 @@ import AuthGuard from '@/app/components/AuthGuard'
 import ChallengeCard from '@/app/components/ChallengeCard'
 import StatsRow from '@/app/components/StatsRow'
 import { buildStravaAuthUrl } from '@/lib/strava'
+import { buildOuraAuthUrl } from '@/lib/oura'
 
 interface Profile {
   id: string
@@ -25,12 +26,14 @@ function ProfilePageInner() {
   const [challenges, setChallenges] = useState<Challenge[]>([])
   const [loading, setLoading] = useState(true)
   const [stravaConnected, setStravaConnected] = useState(false)
+  const [ouraConnected, setOuraConnected] = useState(false)
   const [stravaLoading, setStravaLoading] = useState(false)
   const [syncLoading, setSyncLoading] = useState(false)
   const [syncResult, setSyncResult] = useState<string | null>(null)
 
-  // Check if just redirected from Strava
+  // Check if just redirected from Strava or Oura
   const stravaParam = searchParams.get('strava')
+  const ouraParam = searchParams.get('oura')
 
   useEffect(() => {
     async function load() {
@@ -55,13 +58,14 @@ function ProfilePageInner() {
         })
       }
 
-      // Check Strava connection via users table flag
-      const { data: stravaCheck } = await supabase
+      // Check integration flags
+      const { data: connCheck } = await supabase
         .from('users')
-        .select('strava_connected')
+        .select('strava_connected, oura_connected')
         .eq('id', session.user.id)
         .single()
-      setStravaConnected(stravaCheck?.strava_connected === true)
+      setStravaConnected(connCheck?.strava_connected === true)
+      setOuraConnected(connCheck?.oura_connected === true)
 
       // Active challenges
       const { data: parts } = await supabase
@@ -181,6 +185,16 @@ function ProfilePageInner() {
                     {syncResult}
                   </div>
                 )}
+                {ouraParam === 'connected' && (
+                  <div className="mb-3 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: '#00FF8722', color: '#00FF87', fontFamily: "'JetBrains Mono', monospace" }}>
+                    💍 Oura Ring connected successfully
+                  </div>
+                )}
+                {ouraParam === 'error' && (
+                  <div className="mb-3 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: '#FF475722', color: '#FF4757', fontFamily: "'JetBrains Mono', monospace" }}>
+                    ✗ Oura connection failed. Try again.
+                  </div>
+                )}
                 {stravaParam === 'connected' && (
                   <div className="mb-3 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: '#00FF8722', color: '#00FF87', fontFamily: "'JetBrains Mono', monospace" }}>
                     ✓ Strava connected successfully
@@ -244,23 +258,44 @@ function ProfilePageInner() {
                       </button>
                     )}
                   </div>
-                  <div
-                    className="h-px"
-                    style={{ backgroundColor: '#1A1A2E' }}
-                  />
+                  <div className="h-px" style={{ backgroundColor: '#1A1A2E' }} />
+                  {/* Oura Ring */}
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">💍</span>
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}>Oura Ring</p>
+                        <p className="text-xs" style={{ color: ouraConnected ? '#00FF87' : '#8888AA' }}>
+                          {ouraConnected ? 'Connected — sleep & readiness synced' : 'Sleep, HRV & readiness data'}
+                        </p>
+                      </div>
+                    </div>
+                    {ouraConnected ? (
+                      <span className="px-3 py-1 rounded-lg text-xs" style={{ color: '#00FF87', backgroundColor: '#00FF8722', fontFamily: "'JetBrains Mono', monospace" }}>
+                        ✓ Connected
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => { if (authUserId) window.location.href = buildOuraAuthUrl(authUserId) }}
+                        className="px-3 py-1 rounded-lg text-xs border transition-all"
+                        style={{ color: '#9B8DFF', borderColor: '#9B8DFF55', backgroundColor: '#9B8DFF11', fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        Connect
+                      </button>
+                    )}
+                  </div>
+                  <div className="h-px" style={{ backgroundColor: '#1A1A2E' }} />
+                  {/* Apple Health */}
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
                       <span className="text-xl">🍎</span>
                       <div>
                         <p className="text-sm font-medium" style={{ color: '#8888AA', fontFamily: "'JetBrains Mono', monospace" }}>Apple Health</p>
-                        <p className="text-xs" style={{ color: '#8888AA' }}>Not available on web</p>
+                        <p className="text-xs" style={{ color: '#8888AA' }}>iOS app only</p>
                       </div>
                     </div>
-                    <span
-                      className="px-3 py-1 rounded-lg text-xs"
-                      style={{ color: '#8888AA', backgroundColor: '#1A1A2E', fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      N/A
+                    <span className="px-3 py-1 rounded-lg text-xs" style={{ color: '#8888AA', backgroundColor: '#1A1A2E', fontFamily: "'JetBrains Mono', monospace" }}>
+                      Mobile
                     </span>
                   </div>
                 </div>
