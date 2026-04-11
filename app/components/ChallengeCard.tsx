@@ -17,7 +17,7 @@ export default function ChallengeCard({ challenge, showJoin, onJoin, compact }: 
   const emoji = pillar?.emoji ?? '🏆'
   const progress = challenge.progress ?? 0
   const participants = challenge.participants_count ?? 0
-  const pot = challenge.pot_amount ?? challenge.stake_amount * participants
+  const pot = challenge.pot_amount ?? (challenge.stake_per_user ?? 0) * participants
 
   return (
     <div
@@ -34,12 +34,12 @@ export default function ChallengeCard({ challenge, showJoin, onJoin, compact }: 
                 className="font-semibold text-sm leading-tight truncate hover:text-purple-400 transition-colors"
                 style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
               >
-                {challenge.name}
+                {challenge.title}
               </h3>
             </Link>
-            {!compact && challenge.goal && (
+            {!compact && challenge.description && (
               <p className="text-xs mt-0.5 truncate" style={{ color: '#8888AA' }}>
-                {challenge.goal}
+                {challenge.description}
               </p>
             )}
           </div>

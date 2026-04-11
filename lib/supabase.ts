@@ -11,15 +11,20 @@ export function createClient() {
 // Types
 export interface Challenge {
   id: string
-  name: string
+  title: string
+  description?: string
   pillar: string
-  goal: string
+  goal_value?: number
+  goal_unit?: string
   duration_days: number
-  stake_amount: number
+  stake_per_user: number
   is_public: boolean
   status: string
   creator_id: string
   created_at: string
+  starts_at?: string
+  ends_at?: string
+  contract_address?: string
   participants_count?: number
   pot_amount?: number
   days_left?: number
@@ -54,11 +59,13 @@ export const PILLARS = [
 export const MOCK_CHALLENGES: Challenge[] = [
   {
     id: 'mock-1',
-    name: '30-Day Morning Run',
+    title: '30-Day Morning Run',
     pillar: 'run',
-    goal: 'Run 5km every morning for 30 days',
+    description: 'Run 5km every morning for 30 days',
+    goal_value: 5,
+    goal_unit: 'km',
     duration_days: 30,
-    stake_amount: 25,
+    stake_per_user: 25,
     is_public: true,
     status: 'active',
     creator_id: 'mock-user',
@@ -70,11 +77,11 @@ export const MOCK_CHALLENGES: Challenge[] = [
   },
   {
     id: 'mock-2',
-    name: 'Intermittent Fast Sprint',
+    title: 'Intermittent Fast Sprint',
     pillar: 'fast',
-    goal: '16:8 fasting every day for 14 days',
+    description: '16:8 fasting every day for 14 days',
     duration_days: 14,
-    stake_amount: 10,
+    stake_per_user: 10,
     is_public: true,
     status: 'active',
     creator_id: 'mock-user',
@@ -86,11 +93,11 @@ export const MOCK_CHALLENGES: Challenge[] = [
   },
   {
     id: 'mock-3',
-    name: 'Sleep Optimization',
+    title: 'Sleep Optimization',
     pillar: 'sleep',
-    goal: '8 hours sleep every night for 7 days',
+    description: '8 hours sleep every night for 7 days',
     duration_days: 7,
-    stake_amount: 5,
+    stake_per_user: 5,
     is_public: true,
     status: 'active',
     creator_id: 'mock-user',

@@ -115,7 +115,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
 
   const pillar = PILLARS.find(p => p.key === challenge?.pillar?.toLowerCase())
   const emoji = pillar?.emoji ?? '🏆'
-  const pot = (challenge?.pot_amount ?? (challenge?.stake_amount ?? 0) * participants.length)
+  const pot = (challenge?.pot_amount ?? (challenge?.stake_per_user ?? 0) * participants.length)
   const daysLeft = challenge?.days_left ?? challenge?.duration_days ?? 0
 
   if (loading) {
@@ -144,9 +144,9 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               className="text-2xl font-bold mb-2"
               style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
             >
-              {challenge.name}
+              {challenge.title}
             </h1>
-            <p className="text-sm mb-3" style={{ color: '#8888AA' }}>{challenge.goal}</p>
+            <p className="text-sm mb-3" style={{ color: '#8888AA' }}>{challenge.description}</p>
             <div className="flex items-center justify-center gap-3">
               <PillarBadge pillar={challenge.pillar} />
               <span
@@ -253,7 +253,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
               style={{ backgroundColor: '#6C63FF', color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
             >
-              {joining ? 'Joining...' : `🚀 Join for $${challenge.stake_amount} USDC`}
+              {joining ? 'Joining...' : `🚀 Join for $${challenge.stake_per_user} USDC`}
             </button>
           )}
         </div>

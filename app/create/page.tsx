@@ -31,18 +31,22 @@ export default function CreatePage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { router.push('/login'); return }
 
+    const now = new Date()
+    const endsAt = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000)
+
     const { data, error: insertError } = await supabase
       .from('challenges')
       .insert({
-        name,
+        title: name,
+        description: goal,
         pillar,
-        goal,
         duration_days: duration,
         is_public: isPublic,
-        stake_amount: stake,
+        stake_per_user: stake,
         status: 'active',
         creator_id: session.user.id,
-        created_at: new Date().toISOString(),
+        starts_at: now.toISOString(),
+        ends_at: endsAt.toISOString(),
       })
       .select()
       .single()

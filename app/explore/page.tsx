@@ -41,7 +41,7 @@ export default function ExplorePage() {
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(c =>
-        c.name.toLowerCase().includes(q) || c.goal?.toLowerCase().includes(q)
+        c.title.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q)
       )
     }
     setFiltered(result)
