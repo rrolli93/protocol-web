@@ -1,13 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { PILLARS } from '@/lib/supabase'
+import { createClient, PILLARS } from '@/lib/supabase'
+import { buildStravaAuthUrl } from '@/lib/strava'
 
 export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState(0)
   const [selectedPillars, setSelectedPillars] = useState<string[]>([])
+  const [authUserId, setAuthUserId] = useState<string>('')
+  const [stravaLoading, setStravaLoading] = useState(false)
+
+  useEffect(() => {
+    async function loadUser() {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.id) {
+        setAuthUserId(session.user.id)
+      }
+    }
+    loadUser()
+  }, [])
 
   const totalSteps = 3
 
@@ -123,19 +137,25 @@ export default function OnboardingPage() {
                 Strava Integration
               </p>
               <p className="text-xs mt-1" style={{ color: '#8888AA' }}>
-                Coming soon — activities will sync automatically
+                Auto-track your runs, rides, and workouts
               </p>
             </div>
 
             <button
-              className="w-full py-3 rounded-xl font-semibold text-sm mb-3 transition-all hover:opacity-90"
+              onClick={() => {
+                if (!authUserId) return
+                setStravaLoading(true)
+                window.location.href = buildStravaAuthUrl(authUserId)
+              }}
+              disabled={stravaLoading || !authUserId}
+              className="w-full py-3 rounded-xl font-semibold text-sm mb-3 transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
               style={{
                 backgroundColor: '#FC4C02',
                 color: '#ffffff',
                 fontFamily: "'JetBrains Mono', monospace",
               }}
             >
-              🔗 Connect Strava (Coming Soon)
+              {stravaLoading ? 'Connecting...' : '🔗 Connect Strava'}
             </button>
             <button
               onClick={handleNext}
