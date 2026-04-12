@@ -1,11 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient, type Challenge } from '@/lib/supabase'
 import AuthGuard from '@/app/components/AuthGuard'
 import ProgressBar from '@/app/components/ProgressBar'
 import { getPillar } from '@/lib/pillars'
+import WalletConnect from '@/components/WalletConnect'
+import TransactionStatus, { type TxState } from '@/components/TransactionStatus'
+import { approveUSDC, joinChallenge, claimReward, checkIsWinner } from '@/lib/escrow'
+import { getWalletClient, getPublicClient, parseUSDC } from '@/lib/wallet'
+import { getAddresses } from '@/lib/contracts'
 
 interface Participant {
   user_id: string
@@ -39,7 +44,6 @@ function avatarColor(userId: string) {
 
 function computeProgress(challenge: Challenge, score: number): number {
   if (!challenge.goal_value || challenge.goal_value === 0) {
-    // Fallback to time-elapsed
     const starts = challenge.starts_at ? new Date(challenge.starts_at).getTime() : Date.now()
     const ends = challenge.ends_at ? new Date(challenge.ends_at).getTime() : starts + challenge.duration_days * 86400000
     const elapsed = Math.max(0, Date.now() - starts)
@@ -69,7 +73,6 @@ export default function ChallengePage() {
   const [isParticipating, setIsParticipating] = useState(false)
   const [myProgress, setMyProgress] = useState(0)
   const [myScore, setMyScore] = useState(0)
-  const [joining, setJoining] = useState(false)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [showLogModal, setShowLogModal] = useState(false)
@@ -78,10 +81,39 @@ export default function ChallengePage() {
   const [logLoading, setLogLoading] = useState(false)
   const [logSuccess, setLogSuccess] = useState('')
 
+  // Web3 state
+  const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [txState, setTxState] = useState<TxState>('idle')
+  const [approveTxHash, setApproveTxHash] = useState<string | undefined>()
+  const [joinTxHash, setJoinTxHash] = useState<string | undefined>()
+  const [claimTxHash, setClaimTxHash] = useState<string | undefined>()
+  const [txError, setTxError] = useState<string | undefined>()
+  const [isWinner, setIsWinner] = useState(false)
+  const [hasClaimed, setHasClaimed] = useState(false)
+  const [showWalletPrompt, setShowWalletPrompt] = useState(false)
+
   useEffect(() => {
     if (!id) return
     load()
   }, [id])
+
+  // Check winner status once wallet is connected and challenge is loaded
+  useEffect(() => {
+    if (!walletAddress || !challenge || !id) return
+    checkWinnerStatus()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletAddress, challenge])
+
+  async function checkWinnerStatus() {
+    if (!walletAddress || !id) return
+    try {
+      const publicClient = getPublicClient(false)
+      const res = await checkIsWinner(publicClient, id, walletAddress)
+      if (res.success) setIsWinner(res.data)
+    } catch {
+      // Silently fail — contract may not be deployed yet
+    }
+  }
 
   async function load() {
     const supabase = createClient()
@@ -127,23 +159,125 @@ export default function ChallengePage() {
     setLoading(false)
   }
 
-  async function handleJoin() {
-    setJoining(true)
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { router.push('/login'); return }
+  // ─── Web3 Join Flow ───────────────────────────────────────────────────────────
 
-    const { error } = await supabase.from('challenge_participants').insert({
-      challenge_id: id,
-      user_id: session.user.id,
-      current_score: 0,
-    })
-    if (!error) {
+  const handleJoin = useCallback(async () => {
+    if (!challenge) return
+
+    // Step 0: Require wallet
+    if (!walletAddress) {
+      setShowWalletPrompt(true)
+      return
+    }
+
+    setTxState('idle')
+    setTxError(undefined)
+    setApproveTxHash(undefined)
+    setJoinTxHash(undefined)
+
+    const stakeUSDC = parseUSDC(String(challenge.stake_per_user ?? 0))
+
+    try {
+      const walletClient = await getWalletClient()
+      const chainId = await walletClient.getChainId()
+      const { escrow } = getAddresses(chainId)
+
+      // Step 1: Approve USDC
+      setTxState('approving')
+      const approveResult = await approveUSDC(walletClient, stakeUSDC, escrow)
+
+      if (!approveResult.success) {
+        setTxState('error')
+        setTxError(approveResult.error)
+        return
+      }
+
+      setApproveTxHash(approveResult.hash)
+
+      // Wait for approval confirmation
+      const publicClient = getPublicClient(chainId !== 8453)
+      await publicClient.waitForTransactionReceipt({ hash: approveResult.hash })
+
+      setTxState('approved')
+
+      // Step 2: Join on-chain
+      setTxState('joining')
+      const joinResult = await joinChallenge(walletClient, id, stakeUSDC)
+
+      if (!joinResult.success) {
+        setTxState('error')
+        setTxError(joinResult.error)
+        return
+      }
+
+      setJoinTxHash(joinResult.hash)
+      await publicClient.waitForTransactionReceipt({ hash: joinResult.hash })
+
+      // Step 3: Record in Supabase (only after on-chain confirmation)
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/login'); return }
+
+      const { error: dbError } = await supabase.from('challenge_participants').insert({
+        challenge_id: id,
+        user_id: session.user.id,
+        current_score: 0,
+      })
+
+      if (dbError) {
+        // On-chain succeeded but DB write failed — log and continue, user IS in the challenge
+        console.error('DB insert failed after on-chain join:', dbError)
+      }
+
+      setTxState('confirmed')
       setIsParticipating(true)
       load()
+    } catch (err: unknown) {
+      setTxState('error')
+      const e = err as { message?: string }
+      setTxError(e.message?.slice(0, 120) ?? 'Transaction failed')
     }
-    setJoining(false)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [challenge, walletAddress, id])
+
+  // ─── Claim Reward Flow ────────────────────────────────────────────────────────
+
+  const handleClaimReward = useCallback(async () => {
+    if (!walletAddress) {
+      setShowWalletPrompt(true)
+      return
+    }
+
+    setTxError(undefined)
+    setClaimTxHash(undefined)
+
+    try {
+      const walletClient = await getWalletClient()
+      const chainId = await walletClient.getChainId()
+
+      setTxState('claiming')
+      const result = await claimReward(walletClient, id)
+
+      if (!result.success) {
+        setTxState('error')
+        setTxError(result.error)
+        return
+      }
+
+      setClaimTxHash(result.hash)
+      const publicClient = getPublicClient(chainId !== 8453)
+      await publicClient.waitForTransactionReceipt({ hash: result.hash })
+
+      setTxState('confirmed')
+      setHasClaimed(true)
+    } catch (err: unknown) {
+      setTxState('error')
+      const e = err as { message?: string }
+      setTxError(e.message?.slice(0, 120) ?? 'Claim failed')
+    }
+  }, [walletAddress, id])
+
+  // ─── Manual log ───────────────────────────────────────────────────────────────
 
   async function handleManualLog() {
     if (!logValue || !challenge) return
@@ -165,7 +299,6 @@ export default function ChallengePage() {
     })
 
     if (!error) {
-      // Update participant score
       await supabase.from('challenge_participants')
         .update({ current_score: myScore + val, last_activity_at: new Date().toISOString() })
         .eq('challenge_id', id)
@@ -211,6 +344,10 @@ export default function ChallengePage() {
   const cardStyle = { backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }
 
   const isComplete = challenge.status === 'completed' || daysLeft === 0
+  const hasStake = (challenge.stake_per_user ?? 0) > 0
+
+  // Which tx hash to show in the claim status banner
+  const activeTxHash = claimTxHash ?? joinTxHash
 
   return (
     <AuthGuard>
@@ -242,6 +379,11 @@ export default function ChallengePage() {
               {challenge.is_public && (
                 <span className="px-3 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(108,99,255,0.1)', color: '#6C63FF', ...mono }}>
                   🌐 PUBLIC
+                </span>
+              )}
+              {hasStake && (
+                <span className="px-3 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(0,255,135,0.1)', color: '#00FF87', ...mono }}>
+                  ⛓ ON-CHAIN
                 </span>
               )}
             </div>
@@ -387,27 +529,117 @@ export default function ChallengePage() {
 
         </div>
 
-        {/* Join CTA — fixed bottom */}
+        {/* ── FIXED BOTTOM BAR ───────────────────────────────────────────── */}
+
+        {/* JOIN CTA */}
         {!isParticipating && challenge.status === 'active' && !isComplete && (
           <div className="fixed bottom-0 left-0 right-0 px-4 py-4" style={{ backgroundColor: '#0A0A0F', borderTop: '1px solid #1A1A2E' }}>
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto space-y-3">
+
+              {/* Wallet connect row */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: '#8888AA', ...mono }}>
+                  {hasStake ? 'Wallet required to stake USDC' : 'Connect wallet (optional)'}
+                </span>
+                <WalletConnect
+                  onConnected={(addr) => {
+                    setWalletAddress(addr)
+                    setShowWalletPrompt(false)
+                  }}
+                />
+              </div>
+
+              {/* Wallet prompt message */}
+              {showWalletPrompt && !walletAddress && (
+                <p className="text-xs text-center" style={{ color: '#FF8C42', ...mono }}>
+                  ⚠ Connect your wallet first to stake USDC
+                </p>
+              )}
+
+              {/* Transaction status */}
+              {txState !== 'idle' && (
+                <TransactionStatus
+                  state={txState}
+                  approveTxHash={approveTxHash}
+                  txHash={activeTxHash}
+                  errorMessage={txError}
+                  testnet={true}
+                />
+              )}
+
+              {/* Join button */}
               <button
                 onClick={handleJoin}
-                disabled={joining}
+                disabled={txState === 'approving' || txState === 'joining' || txState === 'confirmed'}
                 className="w-full py-4 rounded-xl font-bold text-base transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
                 style={{ backgroundColor: '#6C63FF', color: '#ffffff', ...mono }}
               >
-                {joining ? 'Joining...' : `🚀 Join for $${challenge.stake_per_user} USDC`}
+                {txState === 'approving' && '⏳ Approving USDC…'}
+                {txState === 'joining' && '⏳ Joining on-chain…'}
+                {txState === 'confirmed' && '✓ Joined!'}
+                {(txState === 'idle' || txState === 'error' || txState === 'approved') &&
+                  `🚀 Join for $${challenge.stake_per_user} USDC`}
               </button>
             </div>
           </div>
         )}
 
-        {isParticipating && !isComplete && (
+        {/* PARTICIPATING — already in */}
+        {isParticipating && !isComplete && txState !== 'confirmed' && (
           <div className="fixed bottom-0 left-0 right-0 px-4 py-4" style={{ backgroundColor: '#0A0A0F', borderTop: '1px solid #1A1A2E' }}>
             <div className="max-w-2xl mx-auto">
               <div className="w-full py-3 rounded-xl text-center" style={{ backgroundColor: 'rgba(0,255,135,0.08)', border: '1px solid rgba(0,255,135,0.2)' }}>
-                <span className="text-sm font-semibold" style={{ color: '#00FF87', ...mono }}>✓ You're in this challenge</span>
+                <span className="text-sm font-semibold" style={{ color: '#00FF87', ...mono }}>✓ You&apos;re in this challenge</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CLAIM REWARD — for winners on completed challenges */}
+        {isComplete && isParticipating && isWinner && !hasClaimed && (
+          <div className="fixed bottom-0 left-0 right-0 px-4 py-4" style={{ backgroundColor: '#0A0A0F', borderTop: '1px solid #1A1A2E' }}>
+            <div className="max-w-2xl mx-auto space-y-3">
+
+              {/* Wallet row */}
+              {!walletAddress && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#8888AA', ...mono }}>Connect wallet to claim</span>
+                  <WalletConnect onConnected={(addr) => setWalletAddress(addr)} />
+                </div>
+              )}
+
+              {/* Claim status */}
+              {txState !== 'idle' && (
+                <TransactionStatus
+                  state={txState}
+                  txHash={claimTxHash}
+                  errorMessage={txError}
+                  testnet={true}
+                />
+              )}
+
+              <button
+                onClick={handleClaimReward}
+                disabled={txState === 'claiming' || txState === 'confirmed'}
+                className="w-full py-4 rounded-xl font-bold text-base transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+                style={{ backgroundColor: '#00FF87', color: '#0A0A0F', ...mono }}
+              >
+                {txState === 'claiming' ? '⏳ Claiming…' :
+                 txState === 'confirmed' ? '✓ Reward Claimed!' :
+                 '🏆 Claim Your Reward'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* COMPLETE — no reward to claim */}
+        {isComplete && (!isWinner || hasClaimed) && (
+          <div className="fixed bottom-0 left-0 right-0 px-4 py-4" style={{ backgroundColor: '#0A0A0F', borderTop: '1px solid #1A1A2E' }}>
+            <div className="max-w-2xl mx-auto">
+              <div className="w-full py-3 rounded-xl text-center" style={{ backgroundColor: 'rgba(136,136,170,0.08)', border: '1px solid #1A1A2E' }}>
+                <span className="text-sm" style={{ color: '#8888AA', ...mono }}>
+                  {hasClaimed ? '✓ Reward claimed' : '✓ Challenge complete'}
+                </span>
               </div>
             </div>
           </div>
