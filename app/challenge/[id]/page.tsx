@@ -6,11 +6,25 @@ import { createClient, type Challenge } from '@/lib/supabase'
 import AuthGuard from '@/app/components/AuthGuard'
 import ProgressBar from '@/app/components/ProgressBar'
 import { getPillar } from '@/lib/pillars'
-import WalletConnect from '@/components/WalletConnect'
-import TransactionStatus, { type TxState } from '@/components/TransactionStatus'
-import { approveUSDC, joinChallenge, claimReward, checkIsWinner } from '@/lib/escrow'
-import { getWalletClient, getPublicClient, parseUSDC } from '@/lib/wallet'
-import { getAddresses } from '@/lib/contracts'
+import dynamic from 'next/dynamic'
+
+// Web3 components — loaded client-side only, won't block SSR or build without viem installed
+const WalletConnect = dynamic(() => import('@/components/WalletConnect'), { ssr: false, loading: () => null })
+const TransactionStatus = dynamic(() => import('@/components/TransactionStatus'), { ssr: false, loading: () => null })
+
+// Web3 types (safe to import even when module is excluded from tsconfig)
+type TxState = 'idle' | 'approving' | 'approved' | 'joining' | 'confirmed' | 'claiming' | 'error'
+
+// Lazy-load Web3 functions at call time so build doesn't fail without viem
+async function loadEscrow() {
+  return import('@/lib/escrow')
+}
+async function loadWallet() {
+  return import('@/lib/wallet')
+}
+async function loadContracts() {
+  return import('@/lib/contracts')
+}
 
 interface Participant {
   user_id: string
@@ -107,6 +121,7 @@ export default function ChallengePage() {
   async function checkWinnerStatus() {
     if (!walletAddress || !id) return
     try {
+      const { getPublicClient, checkIsWinner } = await Promise.all([loadWallet(), loadEscrow()]).then(([w, e]) => ({ ...w, ...e }))
       const publicClient = getPublicClient(false)
       const res = await checkIsWinner(publicClient, id, walletAddress)
       if (res.success) setIsWinner(res.data)
@@ -175,9 +190,12 @@ export default function ChallengePage() {
     setApproveTxHash(undefined)
     setJoinTxHash(undefined)
 
+    const { parseUSDC } = await loadWallet()
     const stakeUSDC = parseUSDC(String(challenge.stake_per_user ?? 0))
 
     try {
+      const [{ getWalletClient, getPublicClient }, { approveUSDC, joinChallenge }, { getAddresses }] =
+        await Promise.all([loadWallet(), loadEscrow(), loadContracts()])
       const walletClient = await getWalletClient()
       const chainId = await walletClient.getChainId()
       const { escrow } = getAddresses(chainId)
@@ -252,6 +270,8 @@ export default function ChallengePage() {
     setClaimTxHash(undefined)
 
     try {
+      const [{ getWalletClient, getPublicClient }, { claimReward }] =
+        await Promise.all([loadWallet(), loadEscrow()])
       const walletClient = await getWalletClient()
       const chainId = await walletClient.getChainId()
 
