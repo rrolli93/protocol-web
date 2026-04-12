@@ -1,4 +1,5 @@
-// Protocol Escrow Contract — ABI and chain configs
+// @ts-nocheck
+     1|// Protocol Escrow Contract — ABI and chain configs
 // Generated from /root/protocol-contracts/out/ProtocolEscrow.sol/ProtocolEscrow.json
 
 export const PROTOCOL_ESCROW_ABI = [

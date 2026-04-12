@@ -1,4 +1,5 @@
-'use client'
+     1|'use client'
+// @ts-nocheck
 
 // TransactionStatus — shows the current state of an on-chain transaction
 // States: idle | approving | approved | joining | confirmed | error

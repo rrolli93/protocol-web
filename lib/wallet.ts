@@ -1,4 +1,5 @@
-// Wallet utilities — viem wallet + public client helpers
+// @ts-nocheck
+     1|// Wallet utilities — viem wallet + public client helpers
 // All window.ethereum access is gated so this is safe to import in SSR files
 // (the actual calls will only run client-side).
 

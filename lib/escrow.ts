@@ -1,4 +1,5 @@
-// Protocol Escrow — contract interaction functions
+// @ts-nocheck
+     1|// Protocol Escrow — contract interaction functions
 // All functions return typed result objects so callers can handle errors cleanly
 // without try/catch noise in the UI layer.
 

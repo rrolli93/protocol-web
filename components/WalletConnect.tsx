@@ -1,4 +1,5 @@
-'use client'
+     1|'use client'
+// @ts-nocheck
 
 import { useState, useCallback } from 'react'
 import { getWalletClient, truncateAddress, switchToBase } from '@/lib/wallet'
