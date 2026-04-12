@@ -1,9 +1,11 @@
 // Supabase Edge Function: settle-challenges
 // Settles all challenges where end_date < now() and status != 'settled'
-// - Computes winners (current_score >= 100)
+// - Computes winners (current_score >= goal_value)
 // - Distributes pot with 2% platform fee
 // - Inserts settlement_record
 // - Updates challenge status to 'settled'
+// - Updates streak/pace on challenge_participants
+// - Updates streak, challenges_won, usdc_earned on users table
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -38,7 +40,7 @@ Deno.serve(async (req: Request) => {
   const now = new Date().toISOString()
   const { data: allChallenges, error: fetchErr } = await supabase
     .from('challenges')
-    .select('id, title, stake_per_user, status, ends_at')
+    .select('id, title, stake_per_user, status, ends_at, goal_value')
     .lt('ends_at', now)
     .neq('status', 'settled')
 
@@ -83,9 +85,10 @@ Deno.serve(async (req: Request) => {
       }
 
       // Step (c): Compute winners vs losers
-      // Winner = current_score >= 100 (percent)
-      const winners = participants.filter(p => (p.current_score ?? 0) >= 100)
-      const losers = participants.filter(p => (p.current_score ?? 0) < 100)
+      // Winner = current_score >= goal_value (raw value, e.g. 67km on a 100km challenge)
+      const goalValue = challenge.goal_value ?? 100
+      const winners = participants.filter(p => (p.current_score ?? 0) >= goalValue)
+      const losers = participants.filter(p => (p.current_score ?? 0) < goalValue)
 
       const stakePerUser = challenge.stake_per_user ?? 0
       const totalPot = stakePerUser * participants.length
@@ -101,13 +104,13 @@ Deno.serve(async (req: Request) => {
         winnerPayout = parseFloat((distributablePot / winnerCount).toFixed(2))
       }
 
-      // Step (e): Update participants with winner flag + payout_amount
+      // Step (e): Update participants with winner flag + payout_amount + pace
       // Update winners
       if (winnerCount > 0) {
         const winnerIds = winners.map(w => w.id)
         const { error: winnerUpdateErr } = await supabase
           .from('challenge_participants')
-          .update({ winner: true, payout_amount: winnerPayout })
+          .update({ winner: true, payout_amount: winnerPayout, pace: 'completed' })
           .in('id', winnerIds)
 
         if (winnerUpdateErr) {
@@ -120,11 +123,46 @@ Deno.serve(async (req: Request) => {
         const loserIds = losers.map(l => l.id)
         const { error: loserUpdateErr } = await supabase
           .from('challenge_participants')
-          .update({ winner: false, payout_amount: 0 })
+          .update({ winner: false, payout_amount: 0, pace: 'failed' })
           .in('id', loserIds)
 
         if (loserUpdateErr) {
           console.error(`Failed to update losers for ${challenge.id}:`, loserUpdateErr)
+        }
+      }
+
+      // Step (e2): Update users table — streak, challenges_won, usdc_earned
+      // Winners: increment streak by 1, increment challenges_won by 1, add winnerPayout to usdc_earned
+      if (winnerCount > 0) {
+        const winnerUserIds = winners.map(w => w.user_id)
+        for (const userId of winnerUserIds) {
+          const { data: userRow } = await supabase
+            .from('users')
+            .select('streak, challenges_won, usdc_earned')
+            .eq('id', userId)
+            .single()
+          if (userRow) {
+            await supabase
+              .from('users')
+              .update({
+                streak: (userRow.streak ?? 0) + 1,
+                challenges_won: (userRow.challenges_won ?? 0) + 1,
+                usdc_earned: parseFloat(((userRow.usdc_earned ?? 0) + winnerPayout).toFixed(2)),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', userId)
+          }
+        }
+      }
+
+      // Losers: reset streak to 0
+      if (loserCount > 0) {
+        const loserUserIds = losers.map(l => l.user_id)
+        for (const userId of loserUserIds) {
+          await supabase
+            .from('users')
+            .update({ streak: 0, updated_at: new Date().toISOString() })
+            .eq('id', userId)
         }
       }
 
