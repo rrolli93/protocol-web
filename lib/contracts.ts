@@ -311,9 +311,16 @@ export const ESCROW_ADDRESS_SEPOLIA = '' as string
 // Helper: pick addresses based on active chain
 export function getAddresses(chainId: number) {
   const isMainnet = chainId === BASE_MAINNET.chainId
+  const escrow = isMainnet ? ESCROW_ADDRESS_MAINNET : ESCROW_ADDRESS_SEPOLIA
+  if (!escrow) {
+    throw new Error(
+      `ProtocolEscrow not deployed on chain ${chainId}. ` +
+      `Deploy the contract and set ESCROW_ADDRESS_${isMainnet ? 'MAINNET' : 'SEPOLIA'} in lib/contracts.ts.`
+    )
+  }
   return {
     usdc: isMainnet ? USDC_ADDRESS_MAINNET : USDC_ADDRESS_SEPOLIA,
-    escrow: isMainnet ? ESCROW_ADDRESS_MAINNET : ESCROW_ADDRESS_SEPOLIA,
+    escrow,
     chain: isMainnet ? BASE_MAINNET : BASE_SEPOLIA,
   }
 }

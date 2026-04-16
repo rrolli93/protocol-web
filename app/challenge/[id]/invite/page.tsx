@@ -450,7 +450,7 @@ export default function ChallengeInvitePage() {
           <div>
             <p className="text-sm font-semibold" style={{ color: '#ffffff' }}>Win real money</p>
             <p className="text-xs" style={{ color: '#8888AA' }}>
-              Hit 100% of your goal → split the pot. Lose = forfeit your stake.
+              Hit your goal → split the pot. Lose = forfeit your stake.
             </p>
           </div>
         </div>
@@ -467,7 +467,7 @@ export default function ChallengeInvitePage() {
             {[
               { icon: '🔒', title: 'Stake USDC', desc: `Lock $${challenge.stake_per_user} to enter` },
               { icon: '📊', title: 'Track Progress', desc: 'Connect Strava or log manually' },
-              { icon: '🏆', title: 'Win the Pot', desc: 'Hit 100% goal → share the pool' },
+              { icon: '🏆', title: 'Win the Pot', desc: 'Hit your goal → share the pool' },
             ].map((step, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div

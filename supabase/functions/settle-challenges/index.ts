@@ -132,41 +132,40 @@ Deno.serve(async (req: Request) => {
       }
 
       // Step (e2): Update users table — streak, challenges_won, usdc_earned
-      // Winners: increment streak by 1, increment challenges_won by 1, add winnerPayout to usdc_earned
+      // Batch fetch all affected users in 1 query, then update each (avoids N+1)
+      const updatedAt = new Date().toISOString()
       if (winnerCount > 0) {
         const winnerUserIds = winners.map(w => w.user_id)
-        for (const userId of winnerUserIds) {
-          const { data: userRow } = await supabase
-            .from('users')
-            .select('streak, challenges_won, usdc_earned')
-            .eq('id', userId)
-            .single()
-          if (userRow) {
-            await supabase
+        const { data: winnerRows } = await supabase
+          .from('users')
+          .select('id, streak, challenges_won, usdc_earned')
+          .in('id', winnerUserIds)
+
+        if (winnerRows && winnerRows.length > 0) {
+          await Promise.all(winnerRows.map(u =>
+            supabase
               .from('users')
               .update({
-                streak: (userRow.streak ?? 0) + 1,
-                challenges_won: (userRow.challenges_won ?? 0) + 1,
-                usdc_earned: parseFloat(((userRow.usdc_earned ?? 0) + winnerPayout).toFixed(2)),
-                updated_at: new Date().toISOString(),
+                streak: (u.streak ?? 0) + 1,
+                challenges_won: (u.challenges_won ?? 0) + 1,
+                usdc_earned: parseFloat(((u.usdc_earned ?? 0) + winnerPayout).toFixed(2)),
+                updated_at: updatedAt,
               })
-              .eq('id', userId)
-          }
+              .eq('id', u.id)
+          ))
         }
       }
 
-      // Losers: reset streak to 0
+      // Losers: reset streak to 0 — single batch update
       if (loserCount > 0) {
         const loserUserIds = losers.map(l => l.user_id)
-        for (const userId of loserUserIds) {
-          await supabase
-            .from('users')
-            .update({ streak: 0, updated_at: new Date().toISOString() })
-            .eq('id', userId)
-        }
+        await supabase
+          .from('users')
+          .update({ streak: 0, updated_at: updatedAt })
+          .in('id', loserUserIds)
       }
 
-      // Step (e): Update challenge status to 'settled'
+      // Step (f): Update challenge status to 'settled'
       const { error: challengeUpdateErr } = await supabase
         .from('challenges')
         .update({ status: 'settled' })
