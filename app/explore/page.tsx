@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient, Challenge, MOCK_CHALLENGES, PILLARS } from '@/lib/supabase'
+import { createClient, Challenge, PILLARS } from '@/lib/supabase'
 import AuthGuard from '@/app/components/AuthGuard'
 import ChallengeCard from '@/app/components/ChallengeCard'
 import { useRouter } from 'next/navigation'
@@ -25,7 +25,7 @@ export default function ExplorePage() {
         .limit(50)
 
       const list = (data ?? []) as Challenge[]
-      const result = list.length > 0 ? list : MOCK_CHALLENGES
+      const result = list
       setChallenges(result)
       setFiltered(result)
       setLoading(false)

@@ -17,7 +17,6 @@ export default function ChallengeCard({ challenge, showJoin, onJoin, compact }: 
   const emoji = challenge.cover_emoji || pillar?.emoji || '🏆'
   const progress = challenge.progress ?? 0
   const participants = challenge.participants_count ?? 0
-  const pot = challenge.pot_amount ?? (challenge.stake_per_user ?? 0) * participants
 
   return (
     <div
@@ -53,7 +52,7 @@ export default function ChallengeCard({ challenge, showJoin, onJoin, compact }: 
           <span style={{ color: '#6C63FF' }}>👥</span> {participants}
         </span>
         <span>
-          <span style={{ color: '#00FF87' }}>💰</span> ${pot} USDC
+          <span style={{ color: '#8888AA' }}>Parked</span>
         </span>
         {challenge.days_left !== undefined && (
           <span>

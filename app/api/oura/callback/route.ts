@@ -39,6 +39,12 @@ export async function GET(request: NextRequest) {
 
   const tokens = await tokenRes.json();
 
+  const { currentUser } = await import('@/lib/dare/http');
+  const sessionUser = await currentUser();
+  if (!sessionUser || sessionUser.id !== state) {
+    return NextResponse.redirect(new URL('/profile?oura=error&reason=auth', request.url));
+  }
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
   await supabase.from('user_integrations').upsert({

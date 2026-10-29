@@ -15,9 +15,9 @@ export default function Navbar({ username }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const links = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/explore', label: 'Explore' },
+    { href: '/dashboard', label: 'Dares' },
     { href: '/create', label: '+ Create' },
+    { href: '/review', label: 'Review' },
     { href: '/profile', label: 'Profile' },
   ]
 
@@ -41,7 +41,7 @@ export default function Navbar({ username }: NavbarProps) {
           className="flex items-center gap-2 font-bold text-lg tracking-widest"
           style={{ color: '#6C63FF', fontFamily: "'JetBrains Mono', monospace" }}
         >
-          ⬡ PROTOCOL
+          DARE
         </Link>
 
         {/* Desktop nav */}

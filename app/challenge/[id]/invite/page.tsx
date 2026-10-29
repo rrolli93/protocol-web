@@ -91,8 +91,6 @@ export default function ChallengeInvitePage() {
   const [notFound, setNotFound] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isParticipating, setIsParticipating] = useState(false)
-  const [joining, setJoining] = useState(false)
-  const [joinError, setJoinError] = useState('')
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -162,40 +160,6 @@ export default function ChallengeInvitePage() {
     setLoading(false)
   }
 
-  async function handleJoin() {
-    if (!isLoggedIn) {
-      // Redirect to signup with return URL
-      router.push(`/signup?redirect=/challenge/${id}/invite`)
-      return
-    }
-    setJoining(true)
-    setJoinError('')
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      router.push(`/signup?redirect=/challenge/${id}/invite`)
-      return
-    }
-
-    // Insert participant
-    const { error } = await supabase
-      .from('challenge_participants')
-      .insert({ challenge_id: id, user_id: session.user.id, current_score: 0 })
-
-    if (error) {
-      if (error.code === '23505') {
-        // Already a participant
-        router.push(`/challenge/${id}`)
-        return
-      }
-      setJoinError('Could not join challenge. Please try again.')
-      setJoining(false)
-      return
-    }
-
-    router.push(`/challenge/${id}`)
-  }
-
   function copyLink() {
     const url = typeof window !== 'undefined' ? window.location.href : ''
     navigator.clipboard.writeText(url).then(() => {
@@ -242,7 +206,6 @@ export default function ChallengeInvitePage() {
   const emoji = pillar?.emoji ?? '🏆'
   const daysLeft = getDaysLeft(challenge)
   const goalStr = getGoalString(challenge)
-  const pot = (challenge.stake_per_user ?? 0) * participantCount
   const isEnded = challenge.status === 'settled' || daysLeft === 0
 
   return (
@@ -257,18 +220,20 @@ export default function ChallengeInvitePage() {
       />
 
       <div className="relative z-10 max-w-lg mx-auto px-4 pt-12 pb-40">
+        <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ color: '#FF8C42', backgroundColor: 'rgba(255,140,66,0.08)' }}>
+          This old screen is parked. Friend-funded dares use a Dare link, and the doer never pays.
+        </p>
 
-        {/* Header — Protocol brand */}
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-2">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
               style={{ backgroundColor: '#6C63FF', color: '#ffffff', ...mono }}
             >
-              P
+              D
             </div>
             <span className="text-sm font-bold tracking-widest uppercase" style={{ color: '#ffffff', ...mono }}>
-              Protocol
+              Dare
             </span>
           </div>
           <span
@@ -346,11 +311,11 @@ export default function ChallengeInvitePage() {
               className="flex flex-col items-center py-4 rounded-xl"
               style={{ backgroundColor: '#0A0A0F', border: '1px solid #1A1A2E' }}
             >
-              <span className="text-xs mb-1" style={{ color: '#8888AA' }}>Pot Size</span>
+              <span className="text-xs mb-1" style={{ color: '#8888AA' }}>Bounty</span>
               <span className="text-xl font-bold" style={{ color: '#FFD700', ...mono }}>
-                ${pot}
+                —
               </span>
-              <span className="text-xs" style={{ color: '#8888AA' }}>USDC</span>
+              <span className="text-xs" style={{ color: '#8888AA' }}>friend-funded</span>
             </div>
             <div
               className="flex flex-col items-center py-4 rounded-xl"
@@ -366,11 +331,11 @@ export default function ChallengeInvitePage() {
               className="flex flex-col items-center py-4 rounded-xl"
               style={{ backgroundColor: '#0A0A0F', border: '1px solid #1A1A2E' }}
             >
-              <span className="text-xs mb-1" style={{ color: '#8888AA' }}>Stake</span>
+              <span className="text-xs mb-1" style={{ color: '#8888AA' }}>Doer</span>
               <span className="text-xl font-bold" style={{ color: '#6C63FF', ...mono }}>
-                ${challenge.stake_per_user}
+                Free
               </span>
-              <span className="text-xs" style={{ color: '#8888AA' }}>to join</span>
+              <span className="text-xs" style={{ color: '#8888AA' }}>never pays</span>
             </div>
           </div>
         </div>
@@ -448,9 +413,9 @@ export default function ChallengeInvitePage() {
         >
           <div className="text-2xl">💸</div>
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#ffffff' }}>Win real money</p>
+            <p className="text-sm font-semibold" style={{ color: '#ffffff' }}>This screen is parked</p>
             <p className="text-xs" style={{ color: '#8888AA' }}>
-              Hit your goal → split the pot. Lose = forfeit your stake.
+              Dare a friend for a good cause. The doer never pays.
             </p>
           </div>
         </div>
@@ -465,9 +430,9 @@ export default function ChallengeInvitePage() {
           </h3>
           <div className="flex flex-col gap-3">
             {[
-              { icon: '🔒', title: 'Stake USDC', desc: `Lock $${challenge.stake_per_user} to enter` },
+              { icon: '🔒', title: 'Parked', desc: 'This old pot screen is not how Dare works' },
               { icon: '📊', title: 'Track Progress', desc: 'Connect Strava or log manually' },
-              { icon: '🏆', title: 'Win the Pot', desc: 'Hit your goal → share the pool' },
+              { icon: '🏆', title: 'Use Dare', desc: 'A friend funds one person. The doer never pays.' },
             ].map((step, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div
@@ -500,7 +465,7 @@ export default function ChallengeInvitePage() {
             {copied ? '✓ Copied!' : '🔗 Copy Link'}
           </button>
           <a
-            href={`https://twitter.com/intent/tweet?text=I%27m%20competing%20in%20${encodeURIComponent(challenge.title)}%20%E2%80%94%20$${pot}%20pot%20on%20%40protocol_app.%20Join%20me!&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Dare a friend for a good cause: ${challenge.title}`)}&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 py-3 rounded-xl text-sm font-semibold border text-center transition-all hover:opacity-80"
@@ -539,27 +504,23 @@ export default function ChallengeInvitePage() {
             </button>
           ) : (
             <>
-              {joinError && (
-                <p className="text-xs text-center mb-2" style={{ color: '#FF4757' }}>{joinError}</p>
-              )}
               <button
-                onClick={handleJoin}
-                disabled={joining}
-                className="w-full py-4 rounded-xl font-bold text-base transition-all active:scale-[0.99] disabled:opacity-50"
+                onClick={() => router.push('/create')}
+                className="w-full py-4 rounded-xl font-bold text-base transition-all active:scale-[0.99]"
                 style={{
-                  background: joining ? '#6C63FF' : 'linear-gradient(135deg, #6C63FF 0%, #9B8DFF 100%)',
+                  background: 'linear-gradient(135deg, #6C63FF 0%, #9B8DFF 100%)',
                   color: '#ffffff',
                   boxShadow: '0 0 30px rgba(108,99,255,0.4)',
                   ...mono,
                 }}
               >
-                {joining ? 'Joining...' : isLoggedIn ? `🚀 Join for $${challenge.stake_per_user} USDC` : '🚀 Sign Up & Join Challenge'}
+                Open Dare instead
               </button>
               {!isLoggedIn && (
                 <p className="text-xs text-center mt-2" style={{ color: '#8888AA' }}>
                   Already have an account?{' '}
                   <button
-                    onClick={() => router.push(`/login?redirect=/challenge/${id}/invite`)}
+                    onClick={() => router.push(`/login?next=${encodeURIComponent(`/challenge/${id}/invite`)}`)}
                     style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                   >
                     Log in
