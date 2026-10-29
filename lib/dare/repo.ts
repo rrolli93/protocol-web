@@ -93,6 +93,11 @@ export interface DareRepo {
   logEvent(dareId: string | null, type: string, payload: unknown): Promise<void>
   listEvents(dareId: string): Promise<DareEvent[]>
 
+  joinWaitlist(email: string, createdAt?: string): Promise<'created' | 'exists'>
+  addNotification(note: import('./types').AppNotification): Promise<void>
+  listNotifications(userId: string): Promise<import('./types').AppNotification[]>
+  createReport(report: import('./types').DareReport): Promise<void>
+
   listCharities(): Promise<Charity[]>
   getCharity(id: string): Promise<Charity | null>
 
@@ -109,7 +114,9 @@ function monthKey(iso: string): string {
   return iso.slice(0, 7)
 }
 
-export function createMemoryRepo(): DareRepo {
+export const DEMO_DARE_ID = '33333333-3333-4333-8333-333333333333'
+
+export function createMemoryRepo(options?: { seedDemo?: boolean }): DareRepo {
   const users = new Map<string, User>()
   const dares = new Map<string, Dare>()
   const fundings = new Map<string, Funding>()
@@ -117,6 +124,9 @@ export function createMemoryRepo(): DareRepo {
   const payouts = new Map<string, Payout>()
   const disputes: Dispute[] = []
   const events: DareEvent[] = []
+  const waitlist = new Map<string, string>()
+  const notifications: import('./types').AppNotification[] = []
+  const reports: import('./types').DareReport[] = []
   const webhooks = new Map<string, 'processing' | 'done'>()
   const media = new Map<string, Uint8Array>()
   let eventId = 1
@@ -125,7 +135,7 @@ export function createMemoryRepo(): DareRepo {
     events.push({ id: eventId++, dareId, type, payload, createdAt: new Date().toISOString() })
   }
 
-  return {
+  const api: DareRepo = {
     async getUser(id) {
       return users.get(id) ?? null
     },
@@ -411,6 +421,21 @@ export function createMemoryRepo(): DareRepo {
     async listEvents(dareId) {
       return events.filter((event) => event.dareId === dareId)
     },
+    async joinWaitlist(email, createdAt = new Date().toISOString()) {
+      const key = email.trim().toLowerCase()
+      if (waitlist.has(key)) return 'exists'
+      waitlist.set(key, createdAt)
+      return 'created'
+    },
+    async addNotification(note) {
+      notifications.push(note)
+    },
+    async listNotifications(userId) {
+      return notifications.filter((note) => note.userId === userId).slice().reverse()
+    },
+    async createReport(report) {
+      reports.push(report)
+    },
 
     async listCharities() {
       return CHARITIES.filter((charity) => charity.active)
@@ -429,4 +454,75 @@ export function createMemoryRepo(): DareRepo {
       return null
     },
   }
+
+  if (options?.seedDemo) {
+    const createdAt = new Date().toISOString()
+    const deadlineAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+    void api.upsertUser({
+      id: '00000000-0000-4000-8000-000000000002',
+      handle: 'funder',
+      displayName: 'Funder',
+      email: 'funder@dare.local',
+      avatarUrl: null,
+      country: 'CH',
+      createdAt,
+      stripeAccountId: null,
+      payoutsEnabled: false,
+      dob: '1990-01-01',
+      ageConfirmed: true,
+      isAdmin: false,
+    })
+    void api.upsertUser({
+      id: '00000000-0000-4000-8000-000000000001',
+      handle: 'doer',
+      displayName: 'Doer',
+      email: 'doer@dare.local',
+      avatarUrl: null,
+      country: 'CH',
+      createdAt,
+      stripeAccountId: null,
+      payoutsEnabled: false,
+      dob: '1990-01-01',
+      ageConfirmed: true,
+      isAdmin: false,
+    })
+    void api.createDare({
+      id: DEMO_DARE_ID,
+      creatorId: '00000000-0000-4000-8000-000000000002',
+      doerId: '00000000-0000-4000-8000-000000000001',
+      mode: 'funded',
+      title: '100 push-ups',
+      rules: '100 push-ups in one unbroken set, on camera.',
+      category: 'fitness',
+      proofRequirements: { continuous: true, spokenCodeWord: true, framing: 'Full body in frame' },
+      deadlineAt,
+      status: 'accepted',
+      charityId: '11111111-1111-4111-8111-111111111111',
+      failOutcome: 'refund',
+      currency: 'CHF',
+      createdAt,
+      codeWord: null,
+      gesture: null,
+      disputeWindowEndsAt: null,
+    })
+    void api.createFunding({
+      id: '44444444-4444-4444-8444-444444444444',
+      dareId: DEMO_DARE_ID,
+      funderId: '00000000-0000-4000-8000-000000000002',
+      amountCents: 2500,
+      chargeCents: 2500,
+      feeCents: 250,
+      feeModel: 'percent',
+      failOutcome: 'refund',
+      charityId: null,
+      stripeCheckoutSessionId: 'cs_test_demo',
+      stripePaymentIntentId: 'pi_demo',
+      stripeChargeId: null,
+      captureMethod: 'automatic',
+      status: 'captured',
+      refundId: null,
+      createdAt,
+    })
+  }
+  return api
 }

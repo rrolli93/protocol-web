@@ -30,6 +30,7 @@ export async function createDareForUser(input: CreateDareInput, user: User, repo
     deadlineAt: parsed.value.deadlineAt,
     status: creatorIsDoer ? 'accepted' : 'open',
     charityId: parsed.value.charityId,
+    failOutcome: parsed.value.failOutcome,
     currency: 'CHF',
     createdAt: now.toISOString(),
     codeWord: null,

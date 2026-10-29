@@ -1,5 +1,6 @@
 import { isAtLeast18 } from '@/lib/dare/validation'
 import { isUser, json, requireUser } from '@/lib/dare/http'
+import { notify } from '@/lib/dare/notify'
 import { presentDare } from '@/lib/dare/present'
 import { getRepo } from '@/lib/dare/runtime'
 
@@ -15,6 +16,13 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   if (await repo.userHasFunding(id, user.id)) return json({ error: 'A funder does not also do the dare' }, 403)
   const accepted = await repo.setDoer(id, user.id)
   if (!accepted) return json({ error: 'This dare already has a doer' }, 409)
+  const creator = await repo.getUser(dare.creatorId)
+  await notify(repo, [creator, user], {
+    dareId: id,
+    type: 'accepted',
+    title: 'Dare accepted',
+    body: `${user.handle} will do “${dare.title}”.`,
+  })
   const updated = await repo.getDare(id)
   if (!updated) return json({ error: 'Dare not found' }, 404)
   return json({ dare: await presentDare(updated, repo, user) })

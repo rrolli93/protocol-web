@@ -1,4 +1,5 @@
-import { DISPUTE_WINDOW_MS, idempotencyCapture, idempotencyRefund, idempotencyTransfer, idempotencyTransferPart, idempotencyVoid, PAYOUT_HOLD_MS, splitPayout } from './money'
+import { DISPUTE_WINDOW_MS, doerReceivesCents, idempotencyCapture, idempotencyRefund, idempotencyTransfer, idempotencyTransferPart, idempotencyVoid, PAYOUT_HOLD_MS } from './money'
+import { notify } from './notify'
 import type { DareRepo } from './repo'
 import type { StripePort } from './stripe-port'
 import { fail, ok, type Funding, type Result } from './types'
@@ -54,11 +55,11 @@ export async function releasePayout(dareId: string, repo: DareRepo, stripe: Stri
 
   const fundings = (await repo.listFundings(dareId)).filter((row) => row.status === 'captured')
   if (fundings.length === 0) return fail(409, 'No captured bounty to pay out')
-  const split = splitPayout(fundings.map((row) => row.amountCents))
+  const totals = payoutTotals(fundings)
   const claim = await repo.claimPayout(dareId, {
-    grossCents: split.grossCents,
-    feeCents: split.feeCents,
-    netCents: split.netCents,
+    grossCents: totals.grossCents,
+    feeCents: totals.feeCents,
+    netCents: totals.netCents,
   }, now)
   if (!claim.claimed) {
     if (claim.reason === 'dispute_window') return fail(409, 'The 24 hour dispute window is still open')
@@ -78,7 +79,7 @@ export async function releasePayout(dareId: string, repo: DareRepo, stripe: Stri
     }
     return fail(409, 'Payout was not claimed')
   }
-  return finishTransfer(dareId, split.netCents, split.feeCents, repo, stripe)
+  return finishTransfer(dareId, totals.netCents, totals.feeCents, repo, stripe)
 }
 
 async function finishTransfer(dareId: string, netCents: number, feeCents: number, repo: DareRepo, stripe: StripePort): Promise<Result<SettlementReceipt>> {
@@ -89,12 +90,12 @@ async function finishTransfer(dareId: string, netCents: number, feeCents: number
   const fundings = (await repo.listFundings(dareId)).filter((row) => row.status === 'captured' || row.status === 'transferred')
   const captured = fundings.filter((row) => row.status === 'captured')
   const source = captured.length > 0 ? captured : fundings
-  const split = splitPayout(source.map((row) => row.amountCents))
+  const totals = payoutTotals(source)
   const transferIds: string[] = []
   if (source.length === 1) {
     const funding = source[0]
     const transfer = await stripe.createTransfer({
-      amountCents: split.netCents,
+      amountCents: totals.netCents,
       destination: doer.stripeAccountId,
       dareId,
       idempotencyKey: idempotencyTransfer(dareId),
@@ -103,11 +104,9 @@ async function finishTransfer(dareId: string, netCents: number, feeCents: number
     })
     transferIds.push(transfer.id)
   } else {
-    for (let index = 0; index < source.length; index += 1) {
-      const funding = source[index]
-      const part = split.parts[index]
+    for (const funding of source) {
       const transfer = await stripe.createTransfer({
-        amountCents: part.netCents,
+        amountCents: doerReceivesCents(funding),
         destination: doer.stripeAccountId,
         dareId,
         idempotencyKey: idempotencyTransferPart(dareId, funding.id),
@@ -120,6 +119,7 @@ async function finishTransfer(dareId: string, netCents: number, feeCents: number
   const primary = transferIds[0]
   if (!primary) return fail(500, 'Transfer did not return an id')
   await repo.markPayoutTransferred(dareId, primary)
+  await tellParticipants(repo, dareId, 'payout', 'Payout sent', 'The bounty was paid to the doer, minus the configured fee.')
   return receipt({
     dareId,
     action: 'payout',
@@ -145,6 +145,18 @@ export async function refundDare(
   const payout = await repo.getPayout(dareId)
   if (payout?.stripeTransferId) return fail(409, 'Already paid out')
 
+  const openFundings = (await repo.listFundings(dareId)).filter((row) => row.status === 'captured' || row.status === 'pending')
+  const charityOnly = openFundings.length > 0 && openFundings.every((row) => row.failOutcome === 'charity')
+  if (charityOnly) {
+    if (dare.status === 'open' || dare.status === 'accepted' || dare.status === 'completed') {
+      await repo.transition(dareId, 'failed', [dare.status])
+    }
+    if (opts.reason) await repo.logEvent(dareId, 'charity_reason', { reason: opts.reason })
+    const donated = await finishRefunds(dareId, repo, stripe)
+    if (donated.ok) return receipt({ ...donated.data, action: 'donate' })
+    return donated
+  }
+
   if (dare.status !== 'refunded') {
     const flipped = await repo.transition(dareId, 'refunded', allowFrom)
     const current = await repo.getDare(dareId)
@@ -163,6 +175,19 @@ async function finishRefunds(dareId: string, repo: DareRepo, stripe: StripePort)
   for (const funding of fundings) {
     if (funding.status === 'refunded') {
       if (funding.refundId && funding.refundId !== 'pending') refundIds.push(funding.refundId)
+      continue
+    }
+    if (funding.failOutcome === 'charity') {
+      if (funding.status === 'donated') continue
+      if (funding.captureMethod === 'manual' && funding.status === 'pending' && funding.stripePaymentIntentId) {
+        await stripe.capturePaymentIntent({
+          paymentIntentId: funding.stripePaymentIntentId,
+          idempotencyKey: idempotencyCapture(dareId, funding.id),
+        })
+        await repo.markFundingCaptured(funding.id, funding.stripePaymentIntentId, funding.stripeChargeId)
+      }
+      const donated = await repo.markFundingDonated(funding.id)
+      if (donated) idempotent = false
       continue
     }
     if (funding.status === 'pending' && funding.captureMethod === 'manual' && funding.stripePaymentIntentId) {
@@ -191,12 +216,15 @@ async function finishRefunds(dareId: string, repo: DareRepo, stripe: StripePort)
     }
     const refund = await stripe.createRefund({
       paymentIntentId: funding.stripePaymentIntentId,
-      amountCents: funding.amountCents,
+      amountCents: funding.feeModel === 'surcharge' ? funding.amountCents : (funding.chargeCents || funding.amountCents),
       idempotencyKey: idempotencyRefund(dareId, funding.id),
     })
     await repo.markFundingRefunded(funding.id, refund.id)
     refundIds.push(refund.id)
     idempotent = false
+  }
+  if (!idempotent) {
+    await tellParticipants(repo, dareId, 'refund', 'Dare settled', 'A miss was refunded or marked for charity.')
   }
   return receipt({
     dareId,
@@ -207,6 +235,15 @@ async function finishRefunds(dareId: string, repo: DareRepo, stripe: StripePort)
     netCents: 0,
     feeCents: 0,
   })
+}
+
+async function tellParticipants(repo: DareRepo, dareId: string, type: string, title: string, body: string) {
+  const dare = await repo.getDare(dareId)
+  if (!dare) return
+  const people = [await repo.getUser(dare.creatorId)]
+  if (dare.doerId) people.push(await repo.getUser(dare.doerId))
+  for (const funding of await repo.listFundings(dareId)) people.push(await repo.getUser(funding.funderId))
+  await notify(repo, people, { dareId, type, title, body })
 }
 
 export async function settleSoloSuccess(dareId: string, repo: DareRepo, stripe: StripePort): Promise<Result<SettlementReceipt>> {
@@ -303,4 +340,10 @@ export function disputeWindowEnd(from: Date): string {
 
 export function capturedAmounts(fundings: Funding[]): number[] {
   return fundings.filter((row) => row.status === 'captured').map((row) => row.amountCents)
+}
+
+export function payoutTotals(fundings: Funding[]): { grossCents: number; feeCents: number; netCents: number } {
+  const grossCents = fundings.reduce((sum, row) => sum + row.amountCents, 0)
+  const netCents = fundings.reduce((sum, row) => sum + doerReceivesCents(row), 0)
+  return { grossCents, feeCents: grossCents - netCents, netCents }
 }

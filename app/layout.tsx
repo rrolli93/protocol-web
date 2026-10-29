@@ -3,9 +3,20 @@ import DevSwitcher from './components/DevSwitcher'
 import './globals.css'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: 'Dare — friends fund the challenge',
   description: 'A friend funds a physical challenge. The doer stakes nothing. Done pays the bounty minus a fee. Missed refunds the funder.',
   manifest: '/manifest.json',
+  openGraph: {
+    title: 'Dare — friends fund the challenge',
+    description: 'The doer never pays. Done pays the doer. Missed refunds the funder.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Dare — friends fund the challenge',
+    description: 'The doer never pays. Done pays the doer. Missed refunds the funder.',
+  },
 }
 
 export default function RootLayout({

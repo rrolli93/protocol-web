@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { devUser, type DevPersona } from '@/lib/dare/dev'
 import { devStoreEnabled } from '@/lib/dare/flags'
 import { json } from '@/lib/dare/http'
@@ -14,7 +13,7 @@ export async function POST(request: Request) {
   const user = devUser(persona as DevPersona)
   const existing = await getRepo().getUser(user.id)
   await getRepo().upsertUser(existing ? { ...user, stripeAccountId: existing.stripeAccountId, payoutsEnabled: existing.payoutsEnabled } : user)
-  const jar = await cookies()
-  jar.set('dare_dev_user', user.id, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30 })
-  return json({ user: { id: user.id, handle: user.handle, isAdmin: user.isAdmin } })
+  const response = json({ user: { id: user.id, handle: user.handle, isAdmin: user.isAdmin } })
+  response.cookies.set('dare_dev_user', user.id, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30 })
+  return response
 }

@@ -23,6 +23,7 @@ export default function CreatePage() {
   const [creatorIsDoer, setCreatorIsDoer] = useState(true)
   const [deadline, setDeadline] = useState('')
   const [charityId, setCharityId] = useState('')
+  const [missToCharity, setMissToCharity] = useState(false)
   const [charities, setCharities] = useState<Array<{ id: string; name: string }>>([])
   const [pledge, setPledge] = useState(0)
   const [paidMode, setPaidMode] = useState(false)
@@ -56,7 +57,8 @@ export default function CreatePage() {
         deadlineAt: new Date(deadline).toISOString(),
         framing,
         creatorIsDoer: mode === 'funded' ? creatorIsDoer : true,
-        charityId: mode === 'solo' ? charityId : null,
+        charityId: mode === 'solo' || missToCharity ? charityId : null,
+        failOutcome: mode === 'funded' && missToCharity ? 'charity' : 'refund',
         pledgeCents: mode === 'solo' && pledge > 0 ? pledge : null,
       }),
     })
@@ -149,8 +151,17 @@ export default function CreatePage() {
                     <input type="checkbox" checked={creatorIsDoer} onChange={(event) => setCreatorIsDoer(event.target.checked)} />
                   </label>
                   <p className="text-sm" style={{ color: '#8888AA' }}>
-                    You do not pay to enter. Share the link and a friend funds CHF 10–100. Paid checkout is {paidMode ? 'on, in Stripe test mode only' : 'off until the feature flag is enabled'}.
+                    You do not pay to enter. Share the link and a friend funds the bounty. The minimum is set in config (CHF 20 unless changed). Paid checkout is {paidMode ? 'on, in Stripe test mode only' : 'off until the feature flag is enabled'}.
                   </p>
+                  <label className="flex items-center gap-2 text-sm" style={{ color: '#ffffff' }}>
+                    <input type="checkbox" checked={missToCharity} onChange={(event) => setMissToCharity(event.target.checked)} />
+                    If the dare is missed, the bounty goes to charity instead of back to the funder
+                  </label>
+                  {missToCharity && (
+                    <select value={charityId} onChange={(event) => setCharityId(event.target.value)} className="px-3 py-2.5 rounded-lg text-sm" style={{ backgroundColor: '#0D0D1A', border: '1px solid #1A1A2E', color: '#ffffff' }}>
+                      {charities.map((charity) => <option key={charity.id} value={charity.id}>{charity.name}</option>)}
+                    </select>
+                  )}
                 </>
               ) : (
                 <>

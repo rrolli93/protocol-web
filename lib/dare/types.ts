@@ -14,6 +14,8 @@ export const DARE_STATUSES = [
 export type DareStatus = (typeof DARE_STATUSES)[number]
 
 export type DareMode = 'funded' | 'solo'
+export type FailOutcome = 'refund' | 'charity'
+export type FeeModel = 'percent' | 'surcharge'
 export type DareCategory = 'fitness' | 'skills' | 'habits'
 export type FundingStatus = 'pending' | 'captured' | 'refunded' | 'transferred' | 'donated'
 export type CaptureMethod = 'automatic' | 'manual'
@@ -55,6 +57,7 @@ export interface Dare {
   deadlineAt: string
   status: DareStatus
   charityId: string | null
+  failOutcome: FailOutcome
   currency: 'CHF'
   createdAt: string
   codeWord: string | null
@@ -67,6 +70,12 @@ export interface Funding {
   dareId: string
   funderId: string
   amountCents: number
+  /** What the card is charged. Equals the bounty, or bounty plus a surcharge. */
+  chargeCents: number
+  feeCents: number
+  feeModel: FeeModel
+  failOutcome: FailOutcome
+  charityId: string | null
   stripeCheckoutSessionId: string | null
   stripePaymentIntentId: string | null
   stripeChargeId: string | null
@@ -122,6 +131,24 @@ export interface Charity {
   name: string
   url: string
   active: boolean
+}
+
+export interface AppNotification {
+  id: string
+  userId: string
+  dareId: string | null
+  type: string
+  title: string
+  body: string
+  createdAt: string
+}
+
+export interface DareReport {
+  id: string
+  dareId: string
+  reporterId: string | null
+  reason: string
+  createdAt: string
 }
 
 export interface DareEvent {

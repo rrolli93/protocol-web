@@ -34,8 +34,9 @@ describe('money', () => {
   })
 
   it('caps a single payment and the dare total', () => {
-    expect(validateFundingAmount(999, 0)).toMatch(/CHF 10/)
-    expect(validateFundingAmount(10_001, 0)).toMatch(/CHF 10/)
+    expect(validateFundingAmount(999, 0)).toMatch(/CHF 20/)
+    expect(validateFundingAmount(1_500, 0)).toMatch(/CHF 20/)
+    expect(validateFundingAmount(10_001, 0)).toMatch(/CHF 100/)
     expect(validateFundingAmount(2_500, 0)).toBeNull()
     expect(validateFundingAmount(5_000, 6_000)).toMatch(/capped/)
     expect(validateMonthlyCap(45_000, 6_000)).toMatch(/500/)
@@ -59,6 +60,8 @@ describe('money', () => {
     expect(findBannedTerm('hold child\'s pose for a minute')).toBeNull()
     expect(findBannedTerm('kidney-friendly walk')).toBeNull()
     expect(findBannedTerm('a rooftop handstand')).toBe('rooftop')
+    expect(findBannedTerm('a nude dare')).toBe('nude')
+    expect(findBannedTerm('sexual challenge')).toBe('sexual')
     expect(findBannedTerm('day of fasting')).toBe('fasting')
     const blocked = validateCreateDare({
       title: 'Beer mile',

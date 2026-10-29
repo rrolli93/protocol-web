@@ -30,6 +30,15 @@ const BANNED_TERMS = [
   'suicide',
   'self harm',
   'brawl',
+  'nude',
+  'naked',
+  'porn',
+  'pornography',
+  'sexual',
+  'nsfw',
+  'weapon',
+  'firearm',
+  'gun',
 ]
 
 export interface CreateDareInput {
@@ -42,6 +51,7 @@ export interface CreateDareInput {
   charityId?: string | null
   pledgeCents?: number | null
   creatorIsDoer?: boolean
+  failOutcome?: 'refund' | 'charity'
 }
 
 export interface ValidDareDraft {
@@ -54,6 +64,7 @@ export interface ValidDareDraft {
   charityId: string | null
   pledgeCents: number | null
   creatorIsDoer: boolean
+  failOutcome: 'refund' | 'charity'
 }
 
 const HOUR_MS = 60 * 60 * 1000
@@ -109,11 +120,15 @@ export function validateCreateDare(input: CreateDareInput, now = new Date()): { 
   if (banned) return { ok: false, error: `This dare is not allowed (matched “${banned}”)` }
   const deadlineError = validateDeadline(input.deadlineAt, now)
   if (deadlineError) return { ok: false, error: deadlineError }
+  const failOutcome = input.failOutcome === 'charity' ? 'charity' : 'refund'
   if (input.mode === 'solo' && !input.charityId) {
     return { ok: false, error: 'Solo mode needs a charity' }
   }
-  if (input.mode === 'funded' && input.charityId) {
-    return { ok: false, error: 'Funded dares do not take a charity' }
+  if (input.mode === 'funded' && failOutcome === 'charity' && !input.charityId) {
+    return { ok: false, error: 'Name a charity for a missed dare' }
+  }
+  if (input.mode === 'funded' && failOutcome !== 'charity' && input.charityId) {
+    return { ok: false, error: 'A charity is only used when a miss goes to charity' }
   }
   const pledge = input.pledgeCents ?? null
   if (input.mode === 'funded' && pledge) {
@@ -128,9 +143,10 @@ export function validateCreateDare(input: CreateDareInput, now = new Date()): { 
       mode: input.mode,
       deadlineAt: new Date(input.deadlineAt).toISOString(),
       framing,
-      charityId: input.mode === 'solo' ? input.charityId ?? null : null,
+      charityId: input.charityId ?? null,
       pledgeCents: input.mode === 'solo' ? pledge : null,
       creatorIsDoer: Boolean(input.creatorIsDoer),
+      failOutcome: input.mode === 'solo' ? 'charity' : failOutcome,
     },
   }
 }

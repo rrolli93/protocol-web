@@ -176,7 +176,7 @@ describe('settlement', () => {
     if (!success.ok) throw new Error(success.error)
     const pledge = await startCheckout({
       dareId: success.data.id,
-      amountCents: 1_500,
+      amountCents: 2_000,
       user: person,
       successUrl: 'http://localhost/ok',
       cancelUrl: 'http://localhost/no',

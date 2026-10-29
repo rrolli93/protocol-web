@@ -4,6 +4,8 @@ Friends fund bounties for physical challenges. The doer stakes nothing. A funder
 
 Paid mode is off unless `DARE_PAID_MODE=true`. The server accepts Stripe **test** keys only (`sk_test_`, `pk_test_`).
 
+If Supabase and Stripe are not configured, the app runs in demo mode with a banner, simulated checkout, and in-memory data. See `DEPLOY.md` for the free-tier deploy and the fee model (`percent` or `surcharge`).
+
 The old USDC escrow path is parked. It is not used to create, fund, or settle a dare.
 
 ## Run it locally

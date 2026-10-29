@@ -24,6 +24,7 @@ export async function presentDare(dare: Dare, repo: DareRepo, viewer: User | nul
     currency: dare.currency,
     bountyCents,
     charity,
+    failOutcome: dare.failOutcome,
     framing: dare.proofRequirements.framing,
     creatorId: dare.creatorId,
     doerId: dare.doerId,

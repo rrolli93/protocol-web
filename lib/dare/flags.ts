@@ -22,12 +22,29 @@ export function paidModeEnabled(env: DareEnv = process.env): boolean {
   return env.DARE_PAID_MODE === 'true'
 }
 
-export function stripeMockEnabled(env: DareEnv = process.env): boolean {
-  return env.DARE_STRIPE_MOCK === 'true'
+export function supabaseConfigured(env: DareEnv = process.env): boolean {
+  return Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY && env.SUPABASE_SERVICE_ROLE_KEY)
 }
 
+/** Memory store when asked, or when Supabase is not configured, so a preview deploy needs no accounts. */
 export function devStoreEnabled(env: DareEnv = process.env): boolean {
-  return env.DARE_DEV_STORE === 'memory'
+  if (env.DARE_DEV_STORE === 'memory') return true
+  if (env.DARE_DEV_STORE === 'supabase') return false
+  return !supabaseConfigured(env)
+}
+
+/**
+ * Simulated checkout when mock mode is on, or when no Stripe secret is configured.
+ * Set DARE_STRIPE_MOCK=false to refuse simulated charges.
+ */
+export function simulatedPayments(env: DareEnv = process.env): boolean {
+  if (env.DARE_STRIPE_MOCK === 'false') return false
+  if (env.DARE_STRIPE_MOCK === 'true') return true
+  return !env.STRIPE_SECRET_KEY
+}
+
+export function stripeMockEnabled(env: DareEnv = process.env): boolean {
+  return simulatedPayments(env) && !env.STRIPE_SECRET_KEY || env.DARE_STRIPE_MOCK === 'true'
 }
 
 export function aiFixturesAllowed(env: DareEnv = process.env): boolean {

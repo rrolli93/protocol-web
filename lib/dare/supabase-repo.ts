@@ -73,6 +73,7 @@ function dareFrom(row: Row): Dare {
     deadlineAt: String(row.deadline_at),
     status: String(row.status) as DareStatus,
     charityId: text(row, 'charity_id'),
+    failOutcome: row.fail_outcome === 'charity' ? 'charity' : 'refund',
     currency: 'CHF',
     createdAt: String(row.created_at),
     codeWord: text(row, 'code_word'),
@@ -87,6 +88,11 @@ function fundingFrom(row: Row): Funding {
     dareId: String(row.dare_id),
     funderId: String(row.funder_id),
     amountCents: num(row, 'amount_cents'),
+    chargeCents: row.charge_cents == null ? num(row, 'amount_cents') : num(row, 'charge_cents'),
+    feeCents: num(row, 'fee_cents'),
+    feeModel: row.fee_model === 'surcharge' ? 'surcharge' : 'percent',
+    failOutcome: row.fail_outcome === 'charity' ? 'charity' : 'refund',
+    charityId: text(row, 'charity_id'),
     stripeCheckoutSessionId: text(row, 'stripe_checkout_session_id'),
     stripePaymentIntentId: text(row, 'stripe_payment_intent_id'),
     stripeChargeId: text(row, 'stripe_charge_id'),
@@ -189,6 +195,7 @@ export function createSupabaseDareRepo(client: SupabaseClient = adminClient()): 
         deadline_at: dare.deadlineAt,
         status: dare.status,
         charity_id: dare.charityId,
+        fail_outcome: dare.failOutcome,
         currency: dare.currency,
         code_word: dare.codeWord,
         gesture: dare.gesture,
@@ -278,6 +285,11 @@ export function createSupabaseDareRepo(client: SupabaseClient = adminClient()): 
         dare_id: funding.dareId,
         funder_id: funding.funderId,
         amount_cents: funding.amountCents,
+        charge_cents: funding.chargeCents,
+        fee_cents: funding.feeCents,
+        fee_model: funding.feeModel,
+        fail_outcome: funding.failOutcome,
+        charity_id: funding.charityId,
         stripe_checkout_session_id: funding.stripeCheckoutSessionId,
         stripe_payment_intent_id: funding.stripePaymentIntentId,
         stripe_charge_id: funding.stripeChargeId,
@@ -524,6 +536,50 @@ export function createSupabaseDareRepo(client: SupabaseClient = adminClient()): 
         payload: row.payload,
         createdAt: String(row.created_at),
       }))
+    },
+    async joinWaitlist(email, createdAt = new Date().toISOString()) {
+      const key = email.trim().toLowerCase()
+      const { error } = await db.from('waitlist').insert({ email: key, created_at: createdAt, age_confirmed: true })
+      if (error) {
+        if (error.message.toLowerCase().includes('duplicate') || error.code === '23505') return 'exists'
+        throw new Error(error.message)
+      }
+      return 'created'
+    },
+    async addNotification(note) {
+      const { error } = await db.from('notifications').insert({
+        id: note.id,
+        user_id: note.userId,
+        dare_id: note.dareId,
+        type: note.type,
+        title: note.title,
+        body: note.body,
+        created_at: note.createdAt,
+      })
+      if (error) throw new Error(error.message)
+    },
+    async listNotifications(userId) {
+      const { data, error } = await db.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+      if (error) throw new Error(error.message)
+      return ((data ?? []) as Row[]).map((row) => ({
+        id: String(row.id),
+        userId: String(row.user_id),
+        dareId: text(row, 'dare_id'),
+        type: String(row.type),
+        title: String(row.title),
+        body: String(row.body),
+        createdAt: String(row.created_at),
+      }))
+    },
+    async createReport(report) {
+      const { error } = await db.from('reports').insert({
+        id: report.id,
+        dare_id: report.dareId,
+        reporter_id: report.reporterId,
+        reason: report.reason,
+        created_at: report.createdAt,
+      })
+      if (error) throw new Error(error.message)
     },
     async listCharities() {
       const { data, error } = await db.from('charities').select('*').eq('active', true)

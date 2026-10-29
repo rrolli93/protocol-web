@@ -1,3 +1,4 @@
+import { notify } from './notify'
 import type { DareRepo } from './repo'
 import { fail, ok, type Result } from './types'
 
@@ -35,6 +36,15 @@ async function applyEvent(event: StripeEventEnvelope, repo: DareRepo): Promise<v
       if (!paymentIntent) return
       if (paymentStatus === 'paid') {
         await repo.markFundingCaptured(funding.id, paymentIntent, stringField(object, 'charge'))
+        const dare = await repo.getDare(funding.dareId)
+        const funder = await repo.getUser(funding.funderId)
+        const doer = dare?.doerId ? await repo.getUser(dare.doerId) : null
+        await notify(repo, [funder, doer], {
+          dareId: funding.dareId,
+          type: 'funded',
+          title: 'Dare funded',
+          body: 'A bounty payment was captured.',
+        })
       } else {
         await repo.markFundingAuthorized(funding.id, paymentIntent)
       }

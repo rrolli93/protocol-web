@@ -1,3 +1,4 @@
+import { GeminiProofChecker } from './gemini'
 import type { AiVerdict } from './types'
 
 export const PASS_CONFIDENCE = 0.85
@@ -21,6 +22,8 @@ export interface ProofCheckInput {
   bountyCents: number
   fixture?: 'pass' | 'fail' | 'unsure' | 'injection'
   notes?: string
+  videoBase64?: string
+  mimeType?: string
 }
 
 export interface ProofChecker {
@@ -165,7 +168,10 @@ export class HttpProofChecker implements ProofChecker {
   }
 }
 
-export function createProofChecker(env: { [key: string]: string | undefined; DARE_AI_PROVIDER?: string; DARE_AI_API_KEY?: string; DARE_AI_API_URL?: string } = process.env): ProofChecker {
+export function createProofChecker(env: { [key: string]: string | undefined; DARE_AI_PROVIDER?: string; DARE_AI_API_KEY?: string; DARE_AI_API_URL?: string; GEMINI_API_KEY?: string } = process.env): ProofChecker {
+  if (env.DARE_AI_PROVIDER === 'gemini' && (env.GEMINI_API_KEY || env.DARE_AI_API_KEY)) {
+    return new GeminiProofChecker(env.GEMINI_API_KEY || env.DARE_AI_API_KEY || '')
+  }
   if (env.DARE_AI_PROVIDER === 'http' && env.DARE_AI_API_KEY && env.DARE_AI_API_URL) {
     return new HttpProofChecker(env.DARE_AI_API_URL, env.DARE_AI_API_KEY)
   }

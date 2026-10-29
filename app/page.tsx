@@ -1,105 +1,74 @@
+'use client'
+
+import { FormEvent, useState } from 'react'
 import Link from 'next/link'
 
+const mono = { fontFamily: "'JetBrains Mono', monospace" }
+
 export default function LandingPage() {
+  const [email, setEmail] = useState('')
+  const [age, setAge] = useState(false)
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function join(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    setMessage('')
+    const response = await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, ageConfirmed: age }),
+    })
+    const body = await response.json()
+    setBusy(false)
+    setMessage(response.ok ? 'You are on the list. We will only use this address for early access.' : (body.error ?? 'Could not save that email'))
+  }
+
   return (
-    <main
-      className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-4"
-      style={{ backgroundColor: '#0A0A0F' }}
-    >
-      {/* Radial glow */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          width: '600px',
-          height: '600px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%)',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-        }}
-      />
-
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center gap-8 max-w-lg w-full text-center">
-        {/* Logo */}
-        <div>
-          <h1
-            className="text-5xl md:text-7xl font-black tracking-[0.25em] select-none"
-            style={{
-              color: '#6C63FF',
-              fontFamily: "'JetBrains Mono', monospace",
-              textShadow: '0 0 40px rgba(108,99,255,0.5)',
-            }}
-          >
-            DARE
-          </h1>
-          <p
-            className="mt-4 text-lg md:text-2xl font-light tracking-widest"
-            style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
-          >
-            Friends fund the challenge.
-          </p>
-          <p className="mt-3 text-sm md:text-base" style={{ color: '#8888AA' }}>
-            The doer puts in no money. A funder pays a CHF bounty. Video proof decides it.
-            Done pays the doer minus a 10% fee. Missed refunds the funder.
-          </p>
-        </div>
-
-        {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
-          <Link
-            href="/signup"
-            className="flex-1 py-3 rounded-xl text-center font-semibold text-base transition-all hover:opacity-90 active:scale-95"
-            style={{
-              backgroundColor: '#6C63FF',
-              color: '#ffffff',
-              fontFamily: "'JetBrains Mono', monospace",
-            }}
-          >
-            Get Started
-          </Link>
-          <Link
-            href="/login"
-            className="flex-1 py-3 rounded-xl text-center font-semibold text-base border transition-all hover:border-purple-500 hover:text-white active:scale-95"
-            style={{
-              backgroundColor: 'transparent',
-              color: '#8888AA',
-              borderColor: '#1A1A2E',
-              fontFamily: "'JetBrains Mono', monospace",
-            }}
-          >
-            Sign In
-          </Link>
-        </div>
-
-        {/* Pills */}
-        <div className="flex flex-wrap justify-center gap-2">
-          {[
-            { emoji: '🏃', label: 'Run' },
-            { emoji: '⚡', label: 'Fast' },
-            { emoji: '😴', label: 'Sleep' },
-            { emoji: '🧘', label: 'Meditate' },
-          ].map(p => (
-            <span
-              key={p.label}
-              className="px-4 py-1.5 rounded-full text-sm font-medium"
-              style={{
-                backgroundColor: 'rgba(108,99,255,0.1)',
-                color: '#6C63FF',
-                border: '1px solid rgba(108,99,255,0.2)',
-                fontFamily: "'JetBrains Mono', monospace",
-              }}
-            >
-              {p.emoji} {p.label}
-            </span>
-          ))}
-        </div>
-
-        {/* Bottom copy */}
-        <p className="text-xs" style={{ color: '#8888AA' }}>
-          Paid mode stays off until you enable it with a Stripe test key. No shared pot.
+    <main className="min-h-screen px-4 py-10" style={{ backgroundColor: '#0A0A0F' }}>
+      <div className="max-w-3xl mx-auto">
+        <p className="text-xs tracking-[0.3em]" style={{ color: '#6C63FF', ...mono }}>DARE</p>
+        <h1 className="text-4xl md:text-6xl font-black mt-3 mb-4" style={{ color: '#ffffff', ...mono }}>Friends fund the challenge.</h1>
+        <p className="text-lg mb-8" style={{ color: '#cccccc' }}>
+          Someone puts up CHF for a real-world dare. The person who does it never pays. Video proof decides the result.
         </p>
+        <ol className="grid md:grid-cols-4 gap-3 mb-8">
+          {[
+            ['1', 'Fund', 'A friend pays a bounty. The doer stakes nothing.'],
+            ['2', 'Prove', 'One continuous video, with a code word shown at the start.'],
+            ['3', 'Review', 'An AI check, then a person when it is unsure.'],
+            ['4', 'Settle', 'Done pays the doer. Missed refunds the funder, or goes to charity if they chose that.'],
+          ].map(([step, title, copy]) => (
+            <li key={step} className="rounded-xl border p-4" style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}>
+              <p className="text-xs" style={{ color: '#6C63FF', ...mono }}>{step}</p>
+              <p className="font-semibold mt-1" style={{ color: '#ffffff' }}>{title}</p>
+              <p className="text-sm mt-2" style={{ color: '#8888AA' }}>{copy}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="text-sm mb-6" style={{ color: '#8888AA' }}>
+          The service fee is shown before anyone pays. It is either taken from the bounty or added on top, depending on configuration. Paid mode stays off until a Stripe test key is enabled. 18+ only.
+        </p>
+        <form onSubmit={join} className="rounded-xl border p-4 mb-6" style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}>
+          <h2 className="font-semibold mb-2" style={{ color: '#ffffff', ...mono }}>Early access</h2>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required placeholder="you@example.com" className="flex-1 px-3 py-3 rounded-lg text-sm" style={{ backgroundColor: '#0A0A0F', color: '#ffffff', border: '1px solid #1A1A2E' }} />
+            <button disabled={busy} className="px-4 py-3 rounded-lg font-semibold" style={{ backgroundColor: '#6C63FF', color: '#ffffff', ...mono }}>{busy ? 'Saving…' : 'Join the list'}</button>
+          </div>
+          <label className="flex items-start gap-2 text-sm mt-3" style={{ color: '#cccccc' }}>
+            <input type="checkbox" checked={age} onChange={(event) => setAge(event.target.checked)} className="mt-1" />
+            I confirm I am 18 or older.
+          </label>
+          {message && <p className="text-sm mt-3" style={{ color: '#00FF87' }}>{message}</p>}
+        </form>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <Link href="/signup" style={{ color: '#6C63FF' }}>Create an account</Link>
+          <Link href="/login" style={{ color: '#6C63FF' }}>Sign in</Link>
+          <Link href="/legal/payouts" style={{ color: '#8888AA' }}>How payouts work</Link>
+          <Link href="/legal/terms" style={{ color: '#8888AA' }}>Terms (draft)</Link>
+          <Link href="/legal/privacy" style={{ color: '#8888AA' }}>Privacy (draft)</Link>
+        </div>
       </div>
     </main>
   )

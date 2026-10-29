@@ -19,15 +19,16 @@ export default function AuthGuard({ children, showNav = true }: AuthGuardProps) 
     const supabase = createClient()
 
     async function checkAuth() {
+      const me = await fetch('/api/me')
+      if (me.ok) {
+        const body = await me.json()
+        setUsername(body.user?.handle)
+        setLoading(false)
+        return true
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
-        const me = await fetch('/api/me')
-        if (me.ok) {
-          const body = await me.json()
-          setUsername(body.user?.handle)
-          setLoading(false)
-          return
-        }
         router.replace('/login')
         return
       }
@@ -46,17 +47,23 @@ export default function AuthGuard({ children, showNav = true }: AuthGuardProps) 
       }
 
       setLoading(false)
+      return false
     }
 
-    checkAuth()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.replace('/login')
-      }
+    let unsubscribe = () => {}
+    let cancelled = false
+    checkAuth().then((demoSession) => {
+      if (cancelled || demoSession) return
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!session) router.replace('/login')
+      })
+      unsubscribe = () => subscription.unsubscribe()
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
   }, [router])
 
   if (loading) {

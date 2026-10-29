@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { priceBounty, type FeeConfig } from '@/lib/dare/money'
+import type { FailOutcome } from '@/lib/dare/types'
 
 const mono = { fontFamily: "'JetBrains Mono', monospace" }
-const AMOUNTS = [1000, 2500, 5000, 10000]
 
 export default function InvitePage() {
   const params = useParams<{ id: string }>()
@@ -13,6 +14,9 @@ export default function InvitePage() {
   const [dare, setDare] = useState<Record<string, unknown> | null>(null)
   const [missing, setMissing] = useState(false)
   const [paidMode, setPaidMode] = useState(false)
+  const [simulated, setSimulated] = useState(false)
+  const [fees, setFees] = useState<FeeConfig | null>(null)
+  const [failOutcome, setFailOutcome] = useState<FailOutcome>('refund')
   const [amount, setAmount] = useState(2500)
   const [message, setMessage] = useState('')
   const [copied, setCopied] = useState(false)
@@ -26,12 +30,20 @@ export default function InvitePage() {
     }
     const body = await response.json()
     setDare(body.dare)
+    if (body.dare?.failOutcome === 'charity') setFailOutcome('charity')
   }
 
   useEffect(() => {
     if (!id) return
     load()
-    fetch('/api/config').then((response) => response.json()).then((body) => setPaidMode(Boolean(body.paidMode))).catch(() => {})
+    fetch('/api/config').then((response) => response.json()).then((body) => {
+      setPaidMode(Boolean(body.paidMode))
+      setSimulated(Boolean(body.simulatedPayments))
+      if (body.fees) {
+        setFees(body.fees)
+        setAmount(body.fees.minBountyCents ?? 2000)
+      }
+    }).catch(() => {})
   }, [id])
 
   async function accept() {
@@ -53,7 +65,7 @@ export default function InvitePage() {
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ dareId: id, amountCents: amount }),
+      body: JSON.stringify({ dareId: id, amountCents: amount, failOutcome }),
     })
     const body = await response.json()
     setBusy(false)
@@ -100,7 +112,7 @@ export default function InvitePage() {
         </div>
         <div className="rounded-xl border p-4 mb-4" style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}>
           <p className="text-sm" style={{ color: '#ffffff' }}>The doer stakes nothing.</p>
-          <p className="text-xs mt-2" style={{ color: '#8888AA' }}>A funder pays the bounty. Done pays the doer minus a 10% fee. Missed refunds the funder. There is no shared pot and nobody wins by betting against the doer.</p>
+          <p className="text-xs mt-2" style={{ color: '#8888AA' }}>A funder pays the bounty. The doer puts in nothing. There is no shared pot and nobody wins by betting against the doer.</p>
         </div>
         {message && <p className="text-sm mb-3" style={{ color: '#FF8C42' }}>{message}</p>}
         {dare.mode === 'funded' && dare.status === 'open' && !viewer.isDoer && (
@@ -111,14 +123,28 @@ export default function InvitePage() {
         {dare.mode === 'funded' && !viewer.isDoer && (dare.status === 'open' || dare.status === 'accepted') && (
           <div className="mb-4">
             <div className="grid grid-cols-4 gap-2 mb-2">
-              {AMOUNTS.map((cents) => (
+              {(fees ? [fees.minBountyCents, 5000, 10000].filter((cents, index, list) => cents >= fees.minBountyCents && cents <= fees.maxBountyCents && list.indexOf(cents) === index) : [2000, 5000, 10000]).map((cents) => (
                 <button key={cents} onClick={() => setAmount(cents)} className="py-2 rounded-lg text-xs" style={{ backgroundColor: amount === cents ? '#00FF87' : '#0D0D1A', color: amount === cents ? '#0A0A0F' : '#ffffff', ...mono }}>
                   {cents / 100}
                 </button>
               ))}
             </div>
-            <button onClick={fund} disabled={busy || !paidMode} className="w-full py-3 rounded-xl font-semibold disabled:opacity-40" style={{ backgroundColor: '#00FF87', color: '#0A0A0F', ...mono }}>
-              {paidMode ? `Fund CHF ${(amount / 100).toFixed(0)}` : 'Paid mode is off'}
+            {dare.charity ? (
+              <label className="flex items-center gap-2 text-sm mb-2" style={{ color: '#ffffff' }}>
+                <input type="checkbox" checked={failOutcome === 'charity'} onChange={(event) => setFailOutcome(event.target.checked ? 'charity' : 'refund')} />
+                If this is missed, give the bounty to {String((dare.charity as { name: string }).name)} instead of refunding me
+              </label>
+            ) : null}
+            {fees && (
+              <div className="rounded-xl border p-3 mb-3 text-sm" style={{ borderColor: '#1A1A2E', color: '#cccccc' }}>
+                {priceBounty(amount, fees, dare.charity ? failOutcome : 'refund').lines.map((line) => (
+                  <p key={line} className="mb-1">{line}</p>
+                ))}
+                {simulated && !paidMode && <p style={{ color: '#FF8C42' }}>Demo checkout. No card is charged.</p>}
+              </div>
+            )}
+            <button onClick={fund} disabled={busy || (!paidMode && !simulated)} className="w-full py-3 rounded-xl font-semibold disabled:opacity-40" style={{ backgroundColor: '#00FF87', color: '#0A0A0F', ...mono }}>
+              {paidMode || simulated ? 'Pay this bounty' : 'Paid mode is off'}
             </button>
           </div>
         )}

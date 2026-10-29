@@ -1,4 +1,5 @@
-import { isAdminEmail, devStoreEnabled, paidModeEnabled, stripeMockEnabled, type DareEnv } from './flags'
+import { isAdminEmail, devStoreEnabled, paidModeEnabled, simulatedPayments, stripeMockEnabled, supabaseConfigured, type DareEnv } from './flags'
+import { feeConfig } from './money'
 import { createMemoryRepo, type DareRepo } from './repo'
 import { createLiveStripe } from './stripe-live'
 import { MockStripe, type StripePort } from './stripe-port'
@@ -10,7 +11,7 @@ let memoryStripe: MockStripe | null = null
 
 export function getRepo(env: DareEnv = process.env): DareRepo {
   if (devStoreEnabled(env)) {
-    if (!memory) memory = createMemoryRepo()
+    if (!memory) memory = createMemoryRepo({ seedDemo: true })
     return memory
   }
   return createSupabaseDareRepo()
@@ -34,12 +35,16 @@ export function getStripe(env: DareEnv = process.env): StripePort {
 }
 
 export function publicConfig(env: DareEnv = process.env) {
+  const fees = feeConfig(env)
   return {
     paidMode: paidModeEnabled(env),
+    simulatedPayments: simulatedPayments(env),
     stripeMock: stripeMockEnabled(env),
     devStore: devStoreEnabled(env),
+    supabase: supabaseConfigured(env),
     currency: 'CHF' as const,
     aiFixtures: env.DARE_AI_ALLOW_FIXTURES === 'true',
+    fees,
   }
 }
 

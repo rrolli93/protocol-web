@@ -1,5 +1,6 @@
 import { startCheckout } from '@/lib/dare/checkout'
-import { paidModeEnabled } from '@/lib/dare/flags'
+import { paidModeEnabled, simulatedPayments } from '@/lib/dare/flags'
+import type { FailOutcome } from '@/lib/dare/types'
 import { appOrigin, isUser, json, requireUser } from '@/lib/dare/http'
 import { createRateLimiter } from '@/lib/dare/rate-limit'
 import { getRepo, getStripe } from '@/lib/dare/runtime'
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   const user = await requireUser()
   if (!isUser(user)) return user
   if (!limit(`checkout:${user.id}`)) return json({ error: 'Too many checkout attempts' }, 429)
-  const body = await request.json().catch(() => ({})) as { dareId?: string; amountCents?: number }
+  const body = await request.json().catch(() => ({})) as { dareId?: string; amountCents?: number; failOutcome?: FailOutcome }
   if (!body.dareId || !Number.isInteger(body.amountCents)) return json({ error: 'dareId and amountCents are required' }, 400)
   let stripe
   try {
@@ -25,6 +26,8 @@ export async function POST(request: Request) {
     amountCents: body.amountCents as number,
     user,
     paidMode: paidModeEnabled(),
+    simulated: simulatedPayments(),
+    failOutcome: body.failOutcome,
     successUrl: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `${origin}/checkout/cancel?dare=${body.dareId}`,
   }, getRepo(), stripe)

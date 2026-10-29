@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.dares (
     'completed', 'failed', 'refunded', 'paid_out', 'cancelled'
   )),
   charity_id uuid REFERENCES public.charities (id),
+  fail_outcome text NOT NULL DEFAULT 'refund' CHECK (fail_outcome IN ('refund', 'charity')),
   currency text NOT NULL DEFAULT 'CHF',
   created_at timestamptz NOT NULL DEFAULT now(),
   code_word text,
@@ -64,7 +65,12 @@ CREATE TABLE IF NOT EXISTS public.fundings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   dare_id uuid NOT NULL REFERENCES public.dares (id) ON DELETE CASCADE,
   funder_id uuid REFERENCES public.users (id),
-  amount_cents integer NOT NULL CHECK (amount_cents BETWEEN 1000 AND 10000),
+  amount_cents integer NOT NULL CHECK (amount_cents BETWEEN 100 AND 100000),
+  charge_cents integer,
+  fee_cents integer NOT NULL DEFAULT 0,
+  fee_model text NOT NULL DEFAULT 'percent' CHECK (fee_model IN ('percent', 'surcharge')),
+  fail_outcome text NOT NULL DEFAULT 'refund' CHECK (fail_outcome IN ('refund', 'charity')),
+  charity_id uuid REFERENCES public.charities (id),
   stripe_checkout_session_id text,
   stripe_payment_intent_id text UNIQUE,
   stripe_charge_id text,
@@ -165,9 +171,9 @@ BEGIN
     WHEN 'draft' THEN p_to IN ('open', 'cancelled')
     WHEN 'open' THEN p_to IN ('accepted', 'cancelled', 'failed')
     WHEN 'accepted' THEN p_to IN ('proof_submitted', 'failed', 'cancelled')
-    WHEN 'proof_submitted' THEN p_to IN ('in_review', 'completed', 'failed', 'accepted')
-    WHEN 'in_review' THEN p_to IN ('completed', 'failed', 'accepted')
-    WHEN 'completed' THEN p_to IN ('paid_out', 'refunded', 'in_review')
+    WHEN 'proof_submitted' THEN p_to IN ('in_review', 'completed', 'failed', 'accepted', 'cancelled')
+    WHEN 'in_review' THEN p_to IN ('completed', 'failed', 'accepted', 'cancelled')
+    WHEN 'completed' THEN p_to IN ('paid_out', 'refunded', 'in_review', 'failed')
     WHEN 'failed' THEN p_to IN ('refunded')
     WHEN 'cancelled' THEN p_to IN ('refunded')
     ELSE false
@@ -398,6 +404,42 @@ GRANT SELECT ON public.disputes TO authenticated;
 GRANT SELECT ON public.events TO authenticated;
 GRANT SELECT ON public.dares TO anon, authenticated;
 GRANT SELECT ON public.charities TO anon, authenticated;
+
+CREATE TABLE IF NOT EXISTS public.waitlist (
+  email text PRIMARY KEY,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  age_confirmed boolean NOT NULL DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id uuid PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+  dare_id uuid REFERENCES public.dares (id) ON DELETE CASCADE,
+  type text NOT NULL,
+  title text NOT NULL,
+  body text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.reports (
+  id uuid PRIMARY KEY,
+  dare_id uuid NOT NULL REFERENCES public.dares (id) ON DELETE CASCADE,
+  reporter_id uuid REFERENCES public.users (id),
+  reason text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.waitlist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.waitlist FROM anon, authenticated;
+REVOKE ALL ON public.reports FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.notifications FROM anon, authenticated;
+GRANT SELECT ON public.notifications TO authenticated;
+
+DROP POLICY IF EXISTS notifications_select_own ON public.notifications;
+CREATE POLICY notifications_select_own ON public.notifications FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit)
 VALUES ('proofs', 'proofs', false, 209715200)

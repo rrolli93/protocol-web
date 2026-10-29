@@ -1,4 +1,5 @@
 import { createHash } from 'crypto'
+import { notify } from './notify'
 import { runProofPipeline, type ProofChecker, type ProofCheckInput } from './ai'
 import { disputeWindowEnd } from './settlement'
 import { newId, type DareRepo } from './repo'
@@ -42,7 +43,8 @@ export async function submitProof(args: {
     return fail(400, 'The code word does not match the one shown at record start')
   }
   if (args.bytes.byteLength === 0) return fail(400, 'The video is empty')
-  if (args.bytes.byteLength > 200 * 1024 * 1024) return fail(400, 'Videos are limited to 200 MB')
+  if (args.bytes.byteLength > 80 * 1024 * 1024) return fail(400, 'Videos are limited to 80 MB')
+  if (args.durationS > 90) return fail(400, 'Clips are limited to 90 seconds')
 
   const hash = sha256(args.bytes)
   const duplicate = await args.repo.findProofByHash(hash)
@@ -103,6 +105,15 @@ export async function submitProof(args: {
     await args.repo.transition(dare.id, 'failed', ['proof_submitted'])
   }
   await args.repo.logEvent(dare.id, 'proof_checked', { proofId: proof.id, outcome: decision.outcome, model: decision.model })
+  const funders = await args.repo.listFundings(dare.id)
+  const people = [await args.repo.getUser(dare.creatorId), args.user]
+  for (const funding of funders) people.push(await args.repo.getUser(funding.funderId))
+  await notify(args.repo, people, {
+    dareId: dare.id,
+    type: 'proof_submitted',
+    title: 'Proof submitted',
+    body: `A proof was submitted for “${dare.title}”.`,
+  })
   const stored = await args.repo.getProof(proof.id)
   return ok({ proof: stored ?? proof, outcome: decision.outcome })
 }

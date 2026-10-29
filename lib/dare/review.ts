@@ -1,3 +1,4 @@
+import { notify } from './notify'
 import { refundDare } from './settlement'
 import type { DareRepo } from './repo'
 import type { StripePort } from './stripe-port'
@@ -34,6 +35,7 @@ export async function applyReview(args: {
       return fail(409, 'Could not approve this dare')
     }
     await args.repo.logEvent(dare.id, 'review_approved', { proofId: proof.id, reviewerId: args.reviewer.id })
+    await notifyOutcome(args.repo, dare.id, dare.creatorId, dare.doerId, 'approved', `“${dare.title}” was approved.`)
     return ok({ status: 'completed' })
   }
 
@@ -61,6 +63,7 @@ export async function applyReview(args: {
     return fail(409, 'Could not reject this dare')
   }
   await args.repo.logEvent(dare.id, 'review_rejected', { proofId: proof.id, reviewerId: args.reviewer.id })
+  await notifyOutcome(args.repo, dare.id, dare.creatorId, dare.doerId, 'rejected', `“${dare.title}” was rejected.`)
   if (dare.mode === 'funded') {
     const refund = await refundDare(dare.id, args.repo, args.stripe)
     if (!refund.ok) return refund
@@ -70,4 +73,13 @@ export async function applyReview(args: {
     if (!donated.ok) return donated
   }
   return ok({ status: 'failed' })
+}
+
+async function notifyOutcome(repo: Parameters<typeof notify>[0], dareId: string, creatorId: string, doerId: string | null, type: string, body: string) {
+  const creator = await repo.getUser(creatorId)
+  const doer = doerId ? await repo.getUser(doerId) : null
+  const fundings = await repo.listFundings(dareId)
+  const people = [creator, doer]
+  for (const funding of fundings) people.push(await repo.getUser(funding.funderId))
+  await notify(repo, people, { dareId, type, title: type === 'approved' ? 'Proof approved' : 'Proof rejected', body })
 }

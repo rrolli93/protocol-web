@@ -13,6 +13,7 @@ export default function DarePage() {
   const [dare, setDare] = useState<Record<string, unknown> | null>(null)
   const [message, setMessage] = useState('')
   const [reason, setReason] = useState('')
+  const [report, setReport] = useState('')
   const [paidMode, setPaidMode] = useState(false)
 
   async function load() {
@@ -89,6 +90,22 @@ export default function DarePage() {
               </div>
             )}
             {viewer.isAdmin && <button onClick={release} className="w-full py-3 rounded-xl text-sm" style={{ backgroundColor: '#1A1A2E', color: '#ffffff', ...mono }}>Run payout / refund job</button>}
+            {viewer.isAdmin && (
+              <button onClick={async () => {
+                const response = await fetch(`/api/dares/${id}/cancel`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reason: 'Admin cancelled this dare' }) })
+                const body = await response.json()
+                setMessage(response.ok ? `Cancelled (${body.status})` : (body.error ?? 'Could not cancel'))
+                load()
+              }} className="w-full py-3 rounded-xl text-sm" style={{ backgroundColor: '#FF4757', color: '#ffffff', ...mono }}>Cancel and refund</button>
+            )}
+            <div className="rounded-xl border p-3" style={{ borderColor: '#1A1A2E' }}>
+              <textarea value={report} onChange={(event) => setReport(event.target.value)} placeholder="Report this dare" className="w-full mb-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#0A0A0F', color: '#ffffff' }} />
+              <button onClick={async () => {
+                const response = await fetch(`/api/dares/${id}/report`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reason: report }) })
+                const body = await response.json()
+                setMessage(response.ok ? 'Report received.' : (body.error ?? 'Could not report'))
+              }} className="w-full py-2 rounded-lg text-sm" style={{ backgroundColor: '#1A1A2E', color: '#ffffff', ...mono }}>Report</button>
+            </div>
             <Link href={`/dare/${id}/invite`} className="text-center text-sm" style={{ color: '#6C63FF' }}>Share link</Link>
           </div>
           {proofs.length > 0 && (
