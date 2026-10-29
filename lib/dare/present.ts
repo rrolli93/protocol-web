@@ -1,6 +1,24 @@
 import type { DareRepo } from './repo'
 import type { Dare, User } from './types'
 
+/** Visual progress for a dare card. Not a payment state. */
+export function dareProgress(status: string): number {
+  switch (status) {
+    case 'draft': return 8
+    case 'open': return 22
+    case 'accepted': return 42
+    case 'proof_submitted': return 64
+    case 'in_review': return 76
+    case 'completed': return 90
+    case 'paid_out':
+    case 'failed':
+    case 'refunded':
+    case 'cancelled':
+      return 100
+    default: return 0
+  }
+}
+
 export async function presentDare(dare: Dare, repo: DareRepo, viewer: User | null) {
   const fundings = await repo.listFundings(dare.id)
   const bountyCents = fundings

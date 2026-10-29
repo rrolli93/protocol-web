@@ -1,3 +1,4 @@
+import { dareProgress } from '@/lib/dare/present'
 import { isAtLeast18 } from '@/lib/dare/validation'
 import { isUser, json, requireUser } from '@/lib/dare/http'
 import { getRepo } from '@/lib/dare/runtime'
@@ -5,7 +6,26 @@ import { getRepo } from '@/lib/dare/runtime'
 export async function GET() {
   const user = await requireUser()
   if (!isUser(user)) return user
-  const dares = await getRepo().listDaresForUser(user.id)
+  const repo = getRepo()
+  const rows = await repo.listDaresForUser(user.id)
+  const dares = await Promise.all(rows.map(async (dare) => {
+    const fundings = await repo.listFundings(dare.id)
+    const counted = fundings.filter((row) => row.status !== 'refunded')
+    const bountyCents = fundings
+      .filter((row) => row.status === 'captured' || row.status === 'transferred' || row.status === 'donated')
+      .reduce((sum, row) => sum + row.amountCents, 0)
+    return {
+      id: dare.id,
+      title: dare.title,
+      status: dare.status,
+      mode: dare.mode,
+      category: dare.category,
+      deadlineAt: dare.deadlineAt,
+      bountyCents,
+      funderCount: new Set(counted.map((row) => row.funderId)).size,
+      progress: dareProgress(dare.status),
+    }
+  }))
   return json({ user, dares })
 }
 

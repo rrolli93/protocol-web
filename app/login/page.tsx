@@ -35,101 +35,29 @@ function LoginForm() {
   }
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: '#0A0A0F' }}
-    >
+    <main className="dare-page flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
-          <h1
-            className="text-3xl font-black tracking-widest"
-            style={{ color: '#6C63FF', fontFamily: "'JetBrains Mono', monospace" }}
-          >
-            DARE
-          </h1>
-          <p className="mt-2 text-sm" style={{ color: '#8888AA' }}>Dare a friend for a good cause.</p>
+          <Link href="/" className="dare-hero-mark mx-auto mb-4" aria-hidden>D</Link>
+          <h1 className="font-display text-5xl font-extrabold" style={{ color: '#fff' }}>DARE</h1>
+          <p className="mt-2 text-sm" style={{ color: '#c4bdd6' }}>Dare a friend for a good cause.</p>
         </div>
-
-        {/* Card */}
-        <div
-          className="rounded-xl p-6 border"
-          style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}
-        >
-          <h2
-            className="text-lg font-semibold mb-6"
-            style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
-          >
-            Sign In
-          </h2>
-
+        <div className="dare-card p-6">
+          <h2 className="font-display text-2xl mb-5" style={{ color: '#fff' }}>Sign In</h2>
           <GoogleButton next={next} />
-          <p className="text-xs text-center mb-4" style={{ color: '#8888AA' }}>or use email</p>
+          <p className="text-xs text-center mb-4" style={{ color: '#c4bdd6' }}>or use email</p>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="block text-xs mb-1.5" style={{ color: '#8888AA', fontFamily: "'JetBrains Mono', monospace" }}>
-                EMAIL
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                placeholder="you@example.com"
-                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-colors focus:border-purple-500"
-                style={{
-                  backgroundColor: '#0A0A0F',
-                  border: '1px solid #1A1A2E',
-                  color: '#ffffff',
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              />
+              <label htmlFor="login-email" className="dare-kicker block mb-1.5">Email</label>
+              <input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" className="dare-input" />
             </div>
-
             <div>
-              <label className="block text-xs mb-1.5" style={{ color: '#8888AA', fontFamily: "'JetBrains Mono', monospace" }}>
-                PASSWORD
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-colors focus:border-purple-500"
-                style={{
-                  backgroundColor: '#0A0A0F',
-                  border: '1px solid #1A1A2E',
-                  color: '#ffffff',
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              />
+              <label htmlFor="login-password" className="dare-kicker block mb-1.5">Password</label>
+              <input id="login-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="dare-input" />
             </div>
-
-            {notice && (
-              <p className="text-sm px-3 py-2 rounded-lg" style={{ color: '#00FF87', backgroundColor: 'rgba(0,255,135,0.08)' }}>{notice}</p>
-            )}
-            {error && (
-              <p
-                className="text-sm px-3 py-2 rounded-lg"
-                style={{ color: '#FF4757', backgroundColor: 'rgba(255,71,87,0.1)', fontFamily: "'JetBrains Mono', monospace" }}
-              >
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg font-semibold text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-              style={{
-                backgroundColor: '#6C63FF',
-                color: '#ffffff',
-                fontFamily: "'JetBrains Mono', monospace",
-              }}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
+            {notice && <p className="text-sm px-3 py-2 rounded-xl" role="status" style={{ color: '#7dffe0', background: 'rgba(61,255,176,0.08)' }}>{notice}</p>}
+            {error && <p className="text-sm px-3 py-2 rounded-xl" role="alert" style={{ color: '#ffb4bc', background: 'rgba(255,71,87,0.12)' }}>{error}</p>}
+            <button type="submit" disabled={loading} className="dare-btn w-full py-3 text-sm">{loading ? 'Signing in...' : 'Sign In'}</button>
             <button
               type="button"
               onClick={async () => {
@@ -144,19 +72,15 @@ function LoginForm() {
                 if (otpError) setError(otpError.message)
                 else setNotice('Check your email for a sign-in link.')
               }}
-              className="w-full py-3 rounded-lg text-sm border"
-              style={{ color: '#ffffff', borderColor: '#1A1A2E', ...{ fontFamily: "'JetBrains Mono', monospace" } }}
+              className="dare-btn-ghost w-full py-3 text-sm"
             >
               Email me a magic link
             </button>
           </form>
         </div>
-
-        <p className="text-center mt-4 text-sm" style={{ color: '#8888AA' }}>
-          Don't have an account?{' '}
-          <Link href={`/signup?next=${encodeURIComponent(next)}`} className="hover:underline" style={{ color: '#6C63FF' }}>
-            Sign up
-          </Link>
+        <p className="text-center mt-5 text-sm" style={{ color: '#c4bdd6' }}>
+          Don&apos;t have an account?{' '}
+          <Link href={`/signup?next=${encodeURIComponent(next)}`} className="underline" style={{ color: '#d7d1ff' }}>Sign up</Link>
         </p>
       </div>
     </main>

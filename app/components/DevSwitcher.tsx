@@ -35,12 +35,15 @@ export default function DevSwitcher() {
   }
 
   return (
-    <div className="px-4 py-2 text-xs flex flex-wrap items-center gap-2" style={{ backgroundColor: '#141422', color: '#8888AA' }}>
-      <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-        {demo ? `Demo — no Supabase account connected. Data stays in this session.${handle ? ` Signed in as ${handle}.` : ''}` : 'Stripe is not configured. Checkout is simulated and does not charge a card.'}
+    <div className="dare-testbar">
+      <span className="dare-pill">Test mode</span>
+      <span>
+        {demo
+          ? `Demo data stays in this browser.${handle ? ` Signed in as ${handle}.` : ''}`
+          : 'Checkout is simulated and does not charge a card.'}
       </span>
       {demo && (['doer', 'funder', 'admin'] as const).map((persona) => (
-        <button key={persona} onClick={() => pick(persona)} className="px-2 py-1 rounded" style={{ backgroundColor: '#1A1A2E', color: '#ffffff' }}>
+        <button key={persona} type="button" onClick={() => pick(persona)} className="dare-chip">
           {persona}
         </button>
       ))}

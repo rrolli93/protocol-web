@@ -2,9 +2,10 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient, Challenge, MOCK_CHALLENGES, PILLARS } from '@/lib/supabase'
+import { createClient, Challenge, PILLARS } from '@/lib/supabase'
 import AuthGuard from '@/app/components/AuthGuard'
 import ChallengeCard from '@/app/components/ChallengeCard'
+import DareCard, { type DareCardData } from '@/app/components/DareCard'
 import StatsRow from '@/app/components/StatsRow'
 import { buildStravaAuthUrl } from '@/lib/strava'
 import { buildOuraAuthUrl } from '@/lib/oura'
@@ -24,6 +25,7 @@ function ProfilePageInner() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authUserId, setAuthUserId] = useState<string>('')
   const [challenges, setChallenges] = useState<Challenge[]>([])
+  const [ownDares, setOwnDares] = useState<DareCardData[]>([])
   const [loading, setLoading] = useState(true)
   const [stravaConnected, setStravaConnected] = useState(false)
   const [ouraConnected, setOuraConnected] = useState(false)
@@ -37,9 +39,23 @@ function ProfilePageInner() {
 
   useEffect(() => {
     async function load() {
+      const me = await fetch('/api/me')
+      if (me.ok) {
+        const body = await me.json()
+        setProfile({
+          id: body.user.id,
+          username: body.user.handle,
+          display_name: body.user.displayName ?? body.user.handle,
+        })
+        setOwnDares(body.dares ?? [])
+      }
+
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      if (!session) {
+        setLoading(false)
+        return
+      }
       setAuthUserId(session.user.id)
 
       const { data: p } = await supabase
@@ -81,9 +97,9 @@ function ProfilePageInner() {
           .in('id', ids)
           .eq('status', 'active')
         const list = (challengeData ?? []) as Challenge[]
-        setChallenges(list.length > 0 ? list : MOCK_CHALLENGES)
+        setChallenges(list)
       } else {
-        setChallenges(MOCK_CHALLENGES)
+        setChallenges([])
       }
 
       setLoading(false)
@@ -124,8 +140,8 @@ function ProfilePageInner() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen" style={{ backgroundColor: '#0A0A0F' }}>
-        <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="dare-page">
+        <div className="max-w-2xl mx-auto px-4 py-8">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#6C63FF', borderTopColor: 'transparent' }} />
@@ -133,20 +149,17 @@ function ProfilePageInner() {
           ) : (
             <>
               {/* Avatar */}
-              <div className="flex flex-col items-center mb-6">
+              <div className="flex flex-col items-center mb-8">
                 <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold mb-3"
-                  style={{ backgroundColor: '#6C63FF', color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
+                  className="dare-hero-mark w-20 h-20 text-2xl mb-4"
+                  style={{ width: 84, height: 84, borderRadius: 28, fontSize: 28 }}
                 >
                   {initials}
                 </div>
-                <h1
-                  className="text-xl font-bold"
-                  style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
-                >
+                <h1 className="font-display text-3xl" style={{ color: '#fff' }}>
                   {profile?.display_name ?? profile?.username}
                 </h1>
-                <p className="text-sm" style={{ color: '#8888AA', fontFamily: "'JetBrains Mono', monospace" }}>
+                <p className="text-sm mt-1" style={{ color: '#c4bdd6' }}>
                   @{profile?.username}
                 </p>
               </div>
@@ -162,10 +175,26 @@ function ProfilePageInner() {
                 />
               </div>
 
+              <div className="mb-8">
+                <h2 className="dare-kicker mb-3">Your dares</h2>
+                {ownDares.length === 0 && challenges.length === 0 ? (
+                  <div className="dare-card dare-empty">
+                    <h3 className="font-display text-2xl" style={{ color: '#fff' }}>No dares yet.</h3>
+                    <p className="text-sm mt-2" style={{ color: '#c4bdd6' }}>Dare a friend for a good cause.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {ownDares.map((dare) => <DareCard key={dare.id} dare={dare} />)}
+                    {challenges.slice(0, 5).map(c => (
+                      <ChallengeCard key={c.id} challenge={c} compact />
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Integrations */}
               <div
-                className="rounded-xl border p-4 mb-6"
-                style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}
+                className="dare-card p-4 mb-6"
               >
                 <h2
                   className="text-sm font-semibold mb-3"
@@ -327,31 +356,10 @@ function ProfilePageInner() {
                 </div>
               </div>
 
-              {/* Active challenges */}
-              <div className="mb-8">
-                <h2
-                  className="text-sm font-semibold mb-3"
-                  style={{ color: '#8888AA', fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  ACTIVE CHALLENGES
-                </h2>
-                <div className="flex flex-col gap-3">
-                  {challenges.slice(0, 5).map(c => (
-                    <ChallengeCard key={c.id} challenge={c} compact />
-                  ))}
-                </div>
-              </div>
-
               {/* Sign out */}
               <button
                 onClick={handleSignOut}
-                className="w-full py-3 rounded-xl font-semibold text-sm border transition-all hover:border-red-500 hover:bg-red-500/10 active:scale-95"
-                style={{
-                  color: '#FF4757',
-                  borderColor: 'rgba(255,71,87,0.3)',
-                  backgroundColor: 'transparent',
-                  fontFamily: "'JetBrains Mono', monospace",
-                }}
+                className="dare-btn-ghost w-full py-3 text-sm"
               >
                 Sign Out
               </button>

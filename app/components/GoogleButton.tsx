@@ -40,13 +40,8 @@ export default function GoogleButton({ next }: { next: string }) {
 
   return (
     <div className="mb-4">
-      <button
-        type="button"
-        onClick={continueWithGoogle}
-        disabled={busy}
-        className="w-full py-3 rounded-lg font-semibold text-sm border disabled:opacity-50"
-        style={{ color: '#ffffff', borderColor: '#6C63FF', backgroundColor: '#12121c', fontFamily: "'JetBrains Mono', monospace" }}
-      >
+      <button type="button" onClick={continueWithGoogle} disabled={busy} className="dare-btn-google">
+        <span aria-hidden className="inline-grid place-items-center w-5 h-5 rounded-full text-[11px] font-bold" style={{ background: '#fff', color: '#3c3488' }}>G</span>
         {busy ? 'Opening Google…' : 'Continue with Google'}
       </button>
       {error && <p className="text-sm mt-2" style={{ color: '#FF4757' }}>{error}</p>}
