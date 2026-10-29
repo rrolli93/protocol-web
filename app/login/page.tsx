@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import GoogleButton from '@/app/components/GoogleButton'
+import { safeNextPath } from '@/lib/dare/auth-google'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const params = useSearchParams()
+  const next = safeNextPath(params.get('next'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -27,7 +31,7 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
+    router.push(next)
   }
 
   return (
@@ -42,9 +46,9 @@ export default function LoginPage() {
             className="text-3xl font-black tracking-widest"
             style={{ color: '#6C63FF', fontFamily: "'JetBrains Mono', monospace" }}
           >
-            ⬡ PROTOCOL
+            DARE
           </h1>
-          <p className="mt-2 text-sm" style={{ color: '#8888AA' }}>Welcome back. Time to grind.</p>
+          <p className="mt-2 text-sm" style={{ color: '#8888AA' }}>Dare a friend for a good cause.</p>
         </div>
 
         {/* Card */}
@@ -59,6 +63,8 @@ export default function LoginPage() {
             Sign In
           </h2>
 
+          <GoogleButton next={next} />
+          <p className="text-xs text-center mb-4" style={{ color: '#8888AA' }}>or use email</p>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <label className="block text-xs mb-1.5" style={{ color: '#8888AA', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -131,7 +137,10 @@ export default function LoginPage() {
                 setNotice('')
                 if (!email) { setError('Enter your email for a magic link.'); return }
                 const supabase = createClient()
-                const { error: otpError } = await supabase.auth.signInWithOtp({ email })
+                const { error: otpError } = await supabase.auth.signInWithOtp({
+                  email,
+                  options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+                })
                 if (otpError) setError(otpError.message)
                 else setNotice('Check your email for a sign-in link.')
               }}
@@ -140,28 +149,20 @@ export default function LoginPage() {
             >
               Email me a magic link
             </button>
-            <button
-              type="button"
-              onClick={async () => {
-                const supabase = createClient()
-                const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'google' })
-                if (oauthError) setError(oauthError.message)
-              }}
-              className="w-full py-3 rounded-lg text-sm border"
-              style={{ color: '#ffffff', borderColor: '#1A1A2E' }}
-            >
-              Continue with Google
-            </button>
           </form>
         </div>
 
         <p className="text-center mt-4 text-sm" style={{ color: '#8888AA' }}>
           Don't have an account?{' '}
-          <Link href="/signup" className="hover:underline" style={{ color: '#6C63FF' }}>
+          <Link href={`/signup?next=${encodeURIComponent(next)}`} className="hover:underline" style={{ color: '#6C63FF' }}>
             Sign up
           </Link>
         </p>
       </div>
     </main>
   )
+}
+
+export default function LoginPage() {
+  return <Suspense><LoginForm /></Suspense>
 }

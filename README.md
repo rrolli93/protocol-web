@@ -1,6 +1,6 @@
 # Dare
 
-Friends fund bounties for physical challenges. The doer stakes nothing. A funder pays CHF 10–100 with Stripe. The doer submits video proof. An AI check plus a human queue decides the edge cases. Done pays the doer the bounty minus a 10% fee. Missed refunds the funder in full. Solo mode can be free, or a personal pledge that comes back on success and is marked for charity on a miss.
+Friends fund bounties for physical challenges. The doer never pays. A funder pays CHF 10–100 with Stripe. The doer submits video proof. An AI check plus a human queue decides the edge cases. Done pays the doer the bounty minus a 10% fee. Missed refunds the funder in full. Solo mode can be free, or a personal pledge that comes back on success and is marked for charity on a miss.
 
 Paid mode is off unless `DARE_PAID_MODE=true`. The server accepts Stripe **test** keys only (`sk_test_`, `pk_test_`).
 

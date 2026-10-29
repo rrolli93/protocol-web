@@ -132,7 +132,7 @@ export function validateCreateDare(input: CreateDareInput, now = new Date()): { 
   }
   const pledge = input.pledgeCents ?? null
   if (input.mode === 'funded' && pledge) {
-    return { ok: false, error: 'The doer does not stake money. A funder pays the bounty.' }
+    return { ok: false, error: 'The doer does not put money in. A funder pays the bounty.' }
   }
   return {
     ok: true,

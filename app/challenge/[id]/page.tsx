@@ -199,7 +199,6 @@ export default function ChallengePage() {
   const pillar = getPillar(challenge.pillar)
   const emoji = challenge.cover_emoji || pillar?.emoji || '🏆'
   const pillarColor = pillar?.color ?? '#6C63FF'
-  const pot = (challenge.stake_per_user ?? 0) * participants.length
   const daysLeft = computeDaysLeft(challenge)
   const totalDays = challenge.duration_days ?? 30
   const hasGoal = (challenge.goal_value ?? 0) > 0
@@ -217,7 +216,7 @@ export default function ChallengePage() {
       <div className="min-h-screen pb-32" style={{ backgroundColor: '#0A0A0F' }}>
         <div className="max-w-2xl mx-auto px-4 py-6">
           <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ color: '#FF8C42', backgroundColor: 'rgba(255,140,66,0.08)' }}>
-            This USDC challenge screen is parked. New dares live under Create. The doer does not stake money.
+            This old screen is parked. New dares live under Create. The doer never pays.
           </p>
 
           {/* Back */}
@@ -253,8 +252,8 @@ export default function ChallengePage() {
           {/* Stats row */}
           <div className="grid grid-cols-4 gap-2 mb-4">
             {[
-              { label: 'STAKE', value: `$${challenge.stake_per_user}`, color: '#00FF87' },
-              { label: 'POT', value: `$${pot}`, color: '#00FF87' },
+              { label: 'SCREEN', value: 'old', color: '#8888AA' },
+              { label: 'ENTRY', value: 'free', color: '#8888AA' },
               { label: 'PLAYERS', value: participants.length, color: '#6C63FF' },
               { label: 'DAYS LEFT', value: daysLeft, color: daysLeft <= 3 ? '#FF4757' : '#FF8C42' },
             ].map(s => (
@@ -378,7 +377,7 @@ export default function ChallengePage() {
               {copied ? '✓ Link Copied' : '🔗 Copy Invite Link'}
             </button>
             <a
-              href={`https://twitter.com/intent/tweet?text=Competing in a ${challenge.title} challenge on @protocol_app — $${pot} pot!&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Dare a friend for a good cause: ${challenge.title}`)}&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 py-2.5 rounded-xl text-sm font-semibold border text-center transition-all hover:opacity-90"
@@ -400,7 +399,7 @@ export default function ChallengePage() {
                 className="w-full py-4 rounded-xl font-bold text-base transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
                 style={{ backgroundColor: '#6C63FF', color: '#ffffff', ...mono }}
               >
-                {joining ? 'Joining...' : `🚀 Join for $${challenge.stake_per_user} USDC`}
+                {joining ? 'Opening...' : 'This screen is parked'}
               </button>
             </div>
           </div>

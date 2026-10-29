@@ -57,6 +57,10 @@ export default function InvitePage() {
     const response = await fetch(`/api/dares/${id}/accept`, { method: 'POST' })
     const body = await response.json()
     setBusy(false)
+    if (response.status === 401) {
+      window.location.href = `/login?next=${encodeURIComponent(`/dare/${id}/invite`)}`
+      return
+    }
     if (!response.ok) {
       setMessage(body.error ?? 'Could not accept')
       return
@@ -74,6 +78,10 @@ export default function InvitePage() {
     })
     const body = await response.json()
     setBusy(false)
+    if (response.status === 401) {
+      window.location.href = `/login?next=${encodeURIComponent(`/dare/${id}/invite`)}`
+      return
+    }
     if (!response.ok) {
       setMessage(body.error ?? 'Checkout failed')
       return
@@ -116,8 +124,8 @@ export default function InvitePage() {
           ))}
         </div>
         <div className="rounded-xl border p-4 mb-4" style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}>
-          <p className="text-sm" style={{ color: '#ffffff' }}>The doer stakes nothing.</p>
-          <p className="text-xs mt-2" style={{ color: '#8888AA' }}>A funder pays the bounty. The doer puts in nothing. There is no shared pot and nobody wins by betting against the doer.</p>
+          <p className="text-sm" style={{ color: '#ffffff' }}>The doer never pays.</p>
+          <p className="text-xs mt-2" style={{ color: '#8888AA' }}>A funder pays the bounty. The doer puts in nothing. There is no shared pool, and nobody is paid if the doer misses.</p>
         </div>
         {message && <p className="text-sm mb-3" style={{ color: '#FF8C42' }}>{message}</p>}
         {dare.mode === 'funded' && dare.status === 'open' && !viewer.isDoer && (

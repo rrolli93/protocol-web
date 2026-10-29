@@ -178,7 +178,7 @@ export default function OnboardingPage() {
               You're in!
             </h2>
             <p className="text-sm mb-2" style={{ color: '#8888AA' }}>
-              Your account is ready. Time to bet on yourself.
+              Your account is ready. Dare a friend for a good cause.
             </p>
 
             <div className="flex flex-col gap-2 mb-8 mt-6">

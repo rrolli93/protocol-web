@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import GoogleButton from '@/app/components/GoogleButton'
+import { safeNextPath } from '@/lib/dare/auth-google'
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter()
+  const params = useSearchParams()
+  const next = safeNextPath(params.get('next'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -62,7 +66,7 @@ export default function SignupPage() {
       } catch (_) {}
     }
 
-    router.push('/onboarding')
+    router.push(next)
   }
 
   return (
@@ -77,9 +81,9 @@ export default function SignupPage() {
             className="text-3xl font-black tracking-widest"
             style={{ color: '#6C63FF', fontFamily: "'JetBrains Mono', monospace" }}
           >
-            ⬡ PROTOCOL
+            DARE
           </h1>
-          <p className="mt-2 text-sm" style={{ color: '#8888AA' }}>Create an account. You must be 18 or older.</p>
+          <p className="mt-2 text-sm" style={{ color: '#8888AA' }}>Dare a friend for a good cause. 18+ only.</p>
         </div>
 
         {/* Card */}
@@ -94,6 +98,8 @@ export default function SignupPage() {
             Create Account
           </h2>
 
+          <GoogleButton next={next} />
+          <p className="text-xs text-center mb-4" style={{ color: '#8888AA' }}>or create an account with email</p>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <label className="block text-xs mb-1.5" style={{ color: '#8888AA', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -199,11 +205,15 @@ export default function SignupPage() {
 
         <p className="text-center mt-4 text-sm" style={{ color: '#8888AA' }}>
           Already have an account?{' '}
-          <Link href="/login" className="hover:underline" style={{ color: '#6C63FF' }}>
+          <Link href={`/login?next=${encodeURIComponent(next)}`} className="hover:underline" style={{ color: '#6C63FF' }}>
             Sign in
           </Link>
         </p>
       </div>
     </main>
   )
+}
+
+export default function SignupPage() {
+  return <Suspense><SignupForm /></Suspense>
 }

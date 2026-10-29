@@ -60,6 +60,6 @@ export { PILLARS } from '@/lib/pillars'
 export const MOCK_CHALLENGES: Challenge[] = [
   { id: 'mock-1', title: '30-Day Morning Run', pillar: 'run', description: '5 km/day', goal_value: 5, goal_unit: 'km', goal_frequency: 'daily', duration_days: 30, stake_per_user: 25, is_public: true, status: 'active', creator_id: 'mock-user', created_at: new Date().toISOString(), participants_count: 12, pot_amount: 300, days_left: 18, progress: 40 },
   { id: 'mock-2', title: '16:8 Fast Sprint', pillar: 'fast', description: '16 hours/day', goal_value: 16, goal_unit: 'hours', goal_frequency: 'daily', duration_days: 14, stake_per_user: 10, is_public: true, status: 'active', creator_id: 'mock-user', created_at: new Date().toISOString(), participants_count: 8, pot_amount: 80, days_left: 6, progress: 57 },
-  { id: 'mock-3', title: '8h Sleep Protocol', pillar: 'sleep', description: '8 hours/night', goal_value: 8, goal_unit: 'hours', goal_frequency: 'daily', duration_days: 7, stake_per_user: 5, is_public: true, status: 'active', creator_id: 'mock-user', created_at: new Date().toISOString(), participants_count: 24, pot_amount: 120, days_left: 3, progress: 71 },
+  { id: 'mock-3', title: '8h of sleep', pillar: 'sleep', description: '8 hours/night', goal_value: 8, goal_unit: 'hours', goal_frequency: 'daily', duration_days: 7, stake_per_user: 5, is_public: true, status: 'active', creator_id: 'mock-user', created_at: new Date().toISOString(), participants_count: 24, pot_amount: 120, days_left: 3, progress: 71 },
 ]
 // cache bust Fri Apr 10 08:50:28 PM UTC 2026

@@ -13,8 +13,31 @@ If you deploy with no keys, the app runs in demo mode: an in-memory store, a dem
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - anon public key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - service_role key → `SUPABASE_SERVICE_ROLE_KEY` (server only, never `NEXT_PUBLIC_`)
-4. Authentication → Providers: enable Email. Optionally enable Google and add the OAuth client.
+4. Authentication → Providers: enable Email.
 5. To make yourself a reviewer, run `update public.users set is_admin = true where email = 'you@example.com';` after you have signed up, or set `DARE_ADMIN_EMAILS=you@example.com`.
+
+### Google sign-in (free)
+
+Google Cloud and Supabase Auth are both free for this. Email and password stay as a fallback.
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/) and create a project (the free tier is enough).
+2. APIs & Services → OAuth consent screen. Choose External. App name: Dare. Add your email as a test user while the app is in Testing. You do not need to pay for verification for a private beta.
+3. APIs & Services → Credentials → Create credentials → OAuth client ID → Web application.
+4. Authorized JavaScript origins:
+   - `http://localhost:3000`
+   - `https://YOUR_VERCEL_DOMAIN` (for example `https://protocol-web-theta.vercel.app`, or the new Dare domain)
+5. Authorized redirect URI — paste Supabase’s callback, not the app’s:
+   - `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`
+   - The project ref is the subdomain of `NEXT_PUBLIC_SUPABASE_URL`.
+6. Copy the client ID and client secret.
+7. In Supabase: Authentication → Providers → Google. Enable it and paste the client ID and secret.
+8. Authentication → URL configuration:
+   - Site URL: `http://localhost:3000` while you develop, then `https://YOUR_VERCEL_DOMAIN` for production.
+   - Redirect URLs (allow-list), add each of these:
+     - `http://localhost:3000/**`
+     - `https://YOUR_VERCEL_DOMAIN/**`
+   - Dare sends people back through `https://YOUR_DOMAIN/auth/callback?next=/dare/.../invite`. That URL must match the allow-list. A dare invite then returns the doer to the same link after Google.
+9. No extra env vars. The anon key already talks to Supabase Auth. Without Supabase keys, the Google button still shows and signs in a demo user.
 
 ## 2. Stripe (test mode, free)
 

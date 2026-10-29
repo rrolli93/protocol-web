@@ -35,7 +35,7 @@ export default function LandingPage() {
         </p>
         <ol className="grid md:grid-cols-4 gap-3 mb-8">
           {[
-            ['1', 'Fund', 'A friend pays a bounty. The doer stakes nothing.'],
+            ['1', 'Fund', 'A friend pays a bounty. The doer never pays.'],
             ['2', 'Prove', 'One continuous video, with a code word shown at the start.'],
             ['3', 'Review', 'An AI check, then a person when it is unsure.'],
             ['4', 'Settle', 'Done pays the doer. Missed refunds the funder, or goes to charity if they chose that.'],

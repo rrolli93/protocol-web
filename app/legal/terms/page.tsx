@@ -10,8 +10,8 @@ export default function TermsPage() {
           Draft, pending Swiss legal review. The Gespa question is unresolved. Do not treat this as final legal advice. Paid mode stays off until that review.
         </p>
         <h1 className="text-3xl font-bold mb-4" style={{ color: '#ffffff' }}>Terms of use</h1>
-        <p className="mb-3">Dare is for adults, 18 or older. A dare is a friend-funded bounty for a physical or skill challenge. The person who does the dare does not pay an entry fee, a stake, or a deposit.</p>
-        <p className="mb-3">There is no shared pot and no bet against the doer. A funder’s best outcome is the challenge they paid for, or their own money back, unless they chose to send a miss to charity.</p>
+        <p className="mb-3">Dare is for adults, 18 or older. A dare is a friend-funded bounty for a physical or skill challenge. The person who does the dare does not pay to take part.</p>
+        <p className="mb-3">There is no shared pool, and nobody is paid for the doer missing the dare. A funder’s best outcome is the challenge they paid for, or their own money back, unless they chose to send a miss to charity.</p>
         <p className="mb-3">Dangerous, illegal, or sexual dares are not allowed. That includes stunts, substances, anything involving minors, and sexual content. Dare may cancel a dare and refund or mark funds for charity.</p>
         <p className="mb-3">You are responsible for your own safety. Video you upload is personal data. See the privacy draft for retention.</p>
         <p className="mb-6">The platform fee is shown before payment. It may be taken from the bounty or added on top. Card-network fees are not returned by Stripe when a charge is refunded.</p>

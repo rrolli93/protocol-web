@@ -155,8 +155,8 @@ function ProfilePageInner() {
               <div className="mb-6">
                 <StatsRow
                   stats={[
-                    { label: 'WON', value: profile?.challenges_won ?? 0, color: '#00FF87' },
-                    { label: 'PARKED', value: 'USDC', color: '#8888AA' },
+                    { label: 'DONE', value: profile?.challenges_won ?? 0, color: '#00FF87' },
+                    { label: 'PARKED', value: 'off', color: '#8888AA' },
                     { label: 'STREAK', value: `${profile?.streak ?? 0}d`, color: '#6C63FF' },
                   ]}
                 />
