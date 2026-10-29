@@ -106,30 +106,31 @@ export default function InvitePage() {
   const bounty = Number(dare.bountyCents ?? 0)
 
   return (
-    <main className="min-h-screen px-4 py-10" style={{ backgroundColor: '#0A0A0F' }}>
+    <main className="dare-page px-4 py-10">
       <div className="max-w-lg mx-auto">
-        <Link href="/" className="text-sm" style={{ color: '#6C63FF', ...mono }}>DARE</Link>
-        <h1 className="text-3xl font-bold mt-4 mb-2" style={{ color: '#ffffff', ...mono }}>{String(dare.title)}</h1>
-        <p className="text-sm mb-4" style={{ color: '#8888AA' }}>{String(dare.rules)}</p>
+        <Link href="/" className="font-display text-lg font-extrabold" style={{ color: '#fff' }}>DARE</Link>
+        <p className="dare-kicker mt-6">Dare a friend for a good cause</p>
+        <h1 className="font-display text-4xl mt-2 mb-3" style={{ color: '#fff' }}>{String(dare.title)}</h1>
+        <p className="text-sm mb-5" style={{ color: '#c4bdd6' }}>{String(dare.rules)}</p>
         <div className="grid grid-cols-3 gap-2 mb-4 text-center">
           {[
             ['BOUNTY', bounty ? `CHF ${(bounty / 100).toFixed(0)}` : 'Open'],
             ['STATUS', String(dare.status)],
             ['MODE', String(dare.mode)],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-xl border p-3" style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}>
+            <div key={label} className="dare-card p-3">
               <p className="text-sm" style={{ color: '#ffffff', ...mono }}>{value}</p>
               <p className="text-xs mt-1" style={{ color: '#8888AA', ...mono }}>{label}</p>
             </div>
           ))}
         </div>
-        <div className="rounded-xl border p-4 mb-4" style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}>
+        <div className="dare-card p-4 mb-4">
           <p className="text-sm" style={{ color: '#ffffff' }}>The doer never pays.</p>
           <p className="text-xs mt-2" style={{ color: '#8888AA' }}>A funder pays the bounty. The doer puts in nothing. There is no shared pool, and nobody is paid if the doer misses.</p>
         </div>
         {message && <p className="text-sm mb-3" style={{ color: '#FF8C42' }}>{message}</p>}
         {dare.mode === 'funded' && dare.status === 'open' && !viewer.isDoer && (
-          <button onClick={accept} disabled={busy} className="w-full py-3 rounded-xl mb-3 font-semibold" style={{ backgroundColor: '#6C63FF', color: '#ffffff', ...mono }}>
+          <button onClick={accept} disabled={busy} className="dare-btn w-full py-3 mb-3">
             I will do this
           </button>
         )}
@@ -156,15 +157,15 @@ export default function InvitePage() {
                 {simulated && !paidMode && <p style={{ color: '#FF8C42' }}>Demo checkout. No card is charged.</p>}
               </div>
             )}
-            <button onClick={fund} disabled={busy || (!paidMode && !simulated)} className="w-full py-3 rounded-xl font-semibold disabled:opacity-40" style={{ backgroundColor: '#00FF87', color: '#0A0A0F', ...mono }}>
+            <button onClick={fund} disabled={busy || (!paidMode && !simulated)} className="dare-btn-mint w-full py-3 disabled:opacity-40">
               {paidMode || simulated ? 'Pay this bounty' : 'Paid mode is off'}
             </button>
           </div>
         )}
         {cryptoRail && <CryptoRail dareId={String(dare.id)} escrowAddress={escrowAddress} />}
         <div className="flex gap-2">
-          <button onClick={copy} className="flex-1 py-3 rounded-xl border text-sm" style={{ borderColor: '#1A1A2E', color: '#ffffff', ...mono }}>{copied ? 'Copied' : 'Copy link'}</button>
-          <Link href={`/dare/${id}`} className="flex-1 py-3 rounded-xl border text-sm text-center" style={{ borderColor: '#1A1A2E', color: '#ffffff', ...mono }}>Open dare</Link>
+          <button onClick={copy} className="dare-btn-ghost flex-1 py-3 text-sm">{copied ? 'Copied' : 'Copy link'}</button>
+          <Link href={`/dare/${id}`} className="dare-btn-ghost flex-1 py-3 text-sm text-center">Open dare</Link>
         </div>
         <img alt="Share card" src={`/api/og?dare=${id}`} className="mt-6 w-full rounded-xl" />
       </div>

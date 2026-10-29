@@ -112,7 +112,7 @@ export default function ProofPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen" style={{ backgroundColor: '#0A0A0F' }}>
+      <div className="min-h-screen" style={{ backgroundColor: 'transparent' }}>
         <div className="max-w-lg mx-auto px-4 py-6">
           <h1 className="text-xl font-bold mb-2" style={{ color: '#ffffff', ...mono }}>Proof</h1>
           <p className="text-sm mb-4" style={{ color: '#8888AA' }}>

@@ -16,7 +16,7 @@ export default function Navbar({ username }: NavbarProps) {
 
   const links = [
     { href: '/dashboard', label: 'Dares' },
-    { href: '/create', label: '+ Create' },
+    { href: '/create', label: 'Create' },
     { href: '/review', label: 'Review' },
     { href: '/profile', label: 'Profile' },
   ]
@@ -24,65 +24,56 @@ export default function Navbar({ username }: NavbarProps) {
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
+    await fetch('/api/dev/session', { method: 'DELETE' }).catch(() => {})
     router.push('/')
+    router.refresh()
   }
 
-  const initials = username ? username.slice(0, 2).toUpperCase() : 'PR'
+  const initials = username ? username.slice(0, 2).toUpperCase() : 'DA'
 
   return (
-    <nav
-      className="sticky top-0 z-50 border-b"
-      style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}
-    >
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 font-bold text-lg tracking-widest"
-          style={{ color: '#6C63FF', fontFamily: "'JetBrains Mono', monospace" }}
-        >
+    <nav className="dare-nav" aria-label="Main">
+      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+        <Link href="/dashboard" className="flex items-center gap-2 font-display text-lg font-extrabold" style={{ color: '#fff' }}>
+          <span className="dare-hero-mark" style={{ width: 32, height: 32, borderRadius: 10, fontSize: 14, boxShadow: 'none' }} aria-hidden>D</span>
           DARE
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
-          {links.map(link => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                color: pathname === link.href ? '#6C63FF' : '#8888AA',
-                backgroundColor: pathname === link.href ? 'rgba(108,99,255,0.1)' : 'transparent',
-                fontFamily: "'JetBrains Mono', monospace",
-              }}
-            >
-              {link.label}
-            </Link>
-          ))}
+        <div className="hidden md:flex items-center gap-1 rounded-full p-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {links.map(link => {
+            const active = pathname === link.href
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? 'page' : undefined}
+                className="px-3 py-1.5 rounded-full text-sm font-medium"
+                style={{ color: active ? '#fff' : '#c4bdd6', background: active ? 'rgba(139,124,255,0.28)' : 'transparent' }}
+              >
+                {link.label}
+              </Link>
+            )
+          })}
         </div>
 
-        {/* Avatar + sign out */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer"
-            style={{ backgroundColor: '#6C63FF', color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
+            style={{ background: 'linear-gradient(160deg,#d7d1ff,#6d63ff)', color: '#140f2e' }}
+            aria-hidden
           >
             {initials}
           </div>
-          <button
-            onClick={handleSignOut}
-            className="hidden md:block text-xs px-3 py-1.5 rounded-lg border transition-colors hover:border-purple-500"
-            style={{ color: '#8888AA', borderColor: '#1A1A2E', fontFamily: "'JetBrains Mono', monospace" }}
-          >
+          <button type="button" onClick={handleSignOut} className="hidden md:inline-flex dare-btn-ghost text-xs px-3 py-1.5">
             Sign Out
           </button>
-
-          {/* Mobile menu toggle */}
           <button
+            type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-1.5 rounded-lg"
-            style={{ color: '#8888AA' }}
+            className="md:hidden p-2 rounded-lg"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            style={{ color: '#c4bdd6' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               {menuOpen ? (
@@ -99,29 +90,20 @@ export default function Navbar({ username }: NavbarProps) {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t px-4 py-3 flex flex-col gap-1" style={{ borderColor: '#1A1A2E' }}>
+        <div className="md:hidden border-t px-4 py-3 flex flex-col gap-1" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           {links.map(link => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setMenuOpen(false)}
-              className="px-3 py-2 rounded-lg text-sm font-medium"
-              style={{
-                color: pathname === link.href ? '#6C63FF' : '#8888AA',
-                backgroundColor: pathname === link.href ? 'rgba(108,99,255,0.1)' : 'transparent',
-                fontFamily: "'JetBrains Mono', monospace",
-              }}
+              className="px-3 py-2 rounded-xl text-sm font-medium"
+              style={{ color: pathname === link.href ? '#fff' : '#c4bdd6', background: pathname === link.href ? 'rgba(139,124,255,0.2)' : 'transparent' }}
             >
               {link.label}
             </Link>
           ))}
-          <button
-            onClick={handleSignOut}
-            className="mt-2 px-3 py-2 rounded-lg text-sm text-left"
-            style={{ color: '#FF4757', fontFamily: "'JetBrains Mono', monospace" }}
-          >
+          <button type="button" onClick={handleSignOut} className="mt-1 px-3 py-2 rounded-xl text-sm text-left" style={{ color: '#ff8b98' }}>
             Sign Out
           </button>
         </div>

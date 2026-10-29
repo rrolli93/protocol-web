@@ -29,12 +29,22 @@ export function renderShareCard(input: { title: string; result: string; amountLa
   const amount = escapeXml(input.amountLabel.slice(0, 40))
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#0A0A0F"/>
-  <rect x="48" y="48" width="1104" height="534" rx="28" fill="#0D0D1A" stroke="#6C63FF"/>
-  <text x="96" y="160" fill="#6C63FF" font-family="ui-monospace, monospace" font-size="28">DARE</text>
-  <text x="96" y="280" fill="#ffffff" font-family="ui-monospace, monospace" font-size="54">${title}</text>
-  <text x="96" y="380" fill="#00FF87" font-family="ui-monospace, monospace" font-size="36">${result}</text>
-  <text x="96" y="470" fill="#8888AA" font-family="ui-monospace, monospace" font-size="28">${amount}</text>
-  <text x="96" y="530" fill="#8888AA" font-family="ui-monospace, monospace" font-size="24">The doer never pays.</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a1233"/>
+      <stop offset="1" stop-color="#07060d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="85%" cy="10%" r="55%">
+      <stop offset="0" stop-color="#6C63FF" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#6C63FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="980" cy="40" r="320" fill="url(#glow)"/>
+  <text x="88" y="150" fill="#c9c2ff" font-family="ui-monospace, monospace" font-size="26" letter-spacing="6">DARE</text>
+  <text x="88" y="270" fill="#ffffff" font-family="ui-sans-serif, sans-serif" font-size="58">${title}</text>
+  <text x="88" y="360" fill="#7dffe0" font-family="ui-sans-serif, sans-serif" font-size="36">${result}</text>
+  <text x="88" y="450" fill="#c4bdd6" font-family="ui-sans-serif, sans-serif" font-size="28">${amount}</text>
+  <text x="88" y="520" fill="#c4bdd6" font-family="ui-sans-serif, sans-serif" font-size="24">The doer never pays.</text>
 </svg>`
 }

@@ -25,11 +25,14 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   }
   return new ImageResponse(
     (
-      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#0A0A0F', color: '#fff', padding: '64px', fontFamily: 'sans-serif' }}>
-        <div style={{ display: 'flex', fontSize: 28, color: '#6C63FF', letterSpacing: 6 }}>DARE</div>
-        <div style={{ display: 'flex', fontSize: 68, marginTop: 24, lineHeight: 1.1 }}>{title}</div>
-        <div style={{ display: 'flex', fontSize: 36, marginTop: 28, color: '#00FF87' }}>{result}</div>
-        <div style={{ display: 'flex', fontSize: 28, marginTop: 16, color: '#8888AA' }}>{amount} · the doer never pays</div>
+      <div style={{ width: '100%', height: '100%', display: 'flex', background: '#07060d', color: '#fff', fontFamily: 'sans-serif' }}>
+        <div style={{ display: 'flex', position: 'absolute', top: -60, right: -20, width: 420, height: 420, borderRadius: 420, background: 'rgba(109,99,255,0.4)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px' }}>
+          <div style={{ display: 'flex', fontSize: 22, letterSpacing: 6, color: '#c9c2ff' }}>DARE</div>
+          <div style={{ display: 'flex', fontSize: 64, marginTop: 22, lineHeight: 1.05 }}>{title}</div>
+          <div style={{ display: 'flex', fontSize: 34, marginTop: 26, color: '#7dffe0' }}>{result}</div>
+          <div style={{ display: 'flex', fontSize: 28, marginTop: 14, color: '#c4bdd6' }}>{amount} · the doer never pays</div>
+        </div>
       </div>
     ),
     { ...size },

@@ -1,55 +1,283 @@
 @import "tailwindcss";
 
 @theme {
-  --color-protocol-bg: #0A0A0F;
-  --color-protocol-card: #0D0D1A;
-  --color-protocol-border: #1A1A2E;
-  --color-protocol-primary: #6C63FF;
-  --color-protocol-success: #00FF87;
-  --color-protocol-error: #FF4757;
-  --color-protocol-muted: #8888AA;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-display: "Syne", "Inter", sans-serif;
   --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --color-protocol-bg: #07060d;
+  --color-protocol-card: #12101c;
+  --color-protocol-border: #2a2640;
+  --color-protocol-primary: #8b7cff;
+  --color-protocol-success: #3dffb0;
+  --color-protocol-error: #ff6b7a;
+  --color-protocol-muted: #c4bdd6;
 }
 
 @layer base {
-  * {
-    box-sizing: border-box;
+  * { box-sizing: border-box; }
+
+  html, body {
+    min-height: 100%;
+    background: #07060d;
+    color: #f6f3ff;
   }
 
-  html,
   body {
-    background-color: #0A0A0F;
-    color: #ffffff;
-    font-family: "Inter", sans-serif;
-    min-height: 100vh;
+    font-family: Inter, sans-serif;
+    background-image:
+      radial-gradient(900px 520px at 88% -12%, rgba(139, 124, 255, 0.34), transparent 58%),
+      radial-gradient(680px 420px at -12% 18%, rgba(61, 255, 176, 0.09), transparent 55%),
+      radial-gradient(500px 320px at 50% 120%, rgba(108, 99, 255, 0.16), transparent 60%);
+    background-attachment: fixed;
   }
 
-  ::-webkit-scrollbar {
-    width: 6px;
+  ::selection { background: rgba(139, 124, 255, 0.45); color: #fff; }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid #d9d2ff;
+    outline-offset: 3px;
   }
-  ::-webkit-scrollbar-track {
-    background: #0D0D1A;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #1A1A2E;
-    border-radius: 3px;
-  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2c2842; border-radius: 99px; }
 }
 
-.font-mono-protocol {
+.font-display { font-family: Syne, Inter, sans-serif; letter-spacing: -0.035em; }
+.font-mono-protocol { font-family: "JetBrains Mono", monospace; }
+
+.dare-kicker {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #c9c2ff;
+}
+
+.dare-muted { color: #c4bdd6; }
+.dare-page { min-height: 100vh; }
+
+.dare-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+}
+
+.dare-card-link {
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.dare-card-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(139, 124, 255, 0.55);
+  box-shadow: 0 22px 60px rgba(108, 99, 255, 0.18);
+}
+
+.dare-btn,
+.dare-btn-ghost,
+.dare-btn-mint,
+.dare-btn-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  transition: transform 150ms ease, filter 150ms ease, background 150ms ease;
+}
+.dare-btn:hover,
+.dare-btn-ghost:hover,
+.dare-btn-mint:hover,
+.dare-btn-google:hover { transform: translateY(-1px); }
+.dare-btn:active,
+.dare-btn-ghost:active,
+.dare-btn-mint:active { transform: translateY(0); }
+.dare-btn:disabled,
+.dare-btn-mint:disabled,
+.dare-btn-google:disabled { opacity: 0.45; transform: none; cursor: not-allowed; }
+
+.dare-btn {
+  background: linear-gradient(180deg, #b1a6ff 0%, #6d63ff 100%);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(109, 99, 255, 0.38);
+}
+.dare-btn-mint {
+  background: linear-gradient(180deg, #7dffe0, #14e6a0);
+  color: #062117;
+  box-shadow: 0 10px 28px rgba(20, 230, 160, 0.22);
+}
+.dare-btn-ghost {
+  background: rgba(255, 255, 255, 0.03);
+  color: #f6f3ff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.dare-btn-google {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(177, 166, 255, 0.55);
   font-family: "JetBrains Mono", monospace;
 }
 
-.glow-primary {
-  box-shadow: 0 0 60px 20px rgba(108, 99, 255, 0.15);
+.dare-input {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.95rem;
+}
+.dare-input::placeholder { color: #8f88a6; }
+
+.dare-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(18px);
+  background: rgba(7, 6, 13, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.card-hover {
-  transition: all 0.2s ease;
+.dare-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 3px 9px 3px 8px;
+  background: rgba(139, 124, 255, 0.16);
+  color: #ebe7ff;
+  border: 1px solid rgba(177, 166, 255, 0.45);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.dare-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: #3dffb0;
+  box-shadow: 0 0 8px #3dffb0;
 }
 
-.card-hover:hover {
-  border-color: rgba(108, 99, 255, 0.4);
-  transform: translateY(-1px);
+.dare-testbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(8, 7, 14, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #d5cee8;
+  font-size: 12px;
+}
+.dare-chip {
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+}
+.dare-chip:hover { border-color: rgba(177, 166, 255, 0.6); }
+
+.dare-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.dare-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6d63ff, #3dffb0);
+}
+
+.dare-status {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d7fff1;
+  background: rgba(61, 255, 176, 0.1);
+  border: 1px solid rgba(61, 255, 176, 0.28);
+  border-radius: 999px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.dare-empty {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: 48px 24px;
+}
+.dare-orb {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 18px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 30% 30%, #fff, transparent 28%),
+    linear-gradient(145deg, #b1a6ff, #4d3dff 55%, #1a1430 140%);
+  box-shadow: 0 0 0 10px rgba(139, 124, 255, 0.12), 0 20px 50px rgba(109, 99, 255, 0.4);
+  animation: float 4.5s ease-in-out infinite;
+}
+
+.dare-hero-mark {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #d7d1ff, #6d63ff);
+  box-shadow: 0 0 0 8px rgba(139, 124, 255, 0.12), 0 16px 40px rgba(109, 99, 255, 0.45);
+  color: #140f2e;
+  font-family: Syne, sans-serif;
+  font-weight: 800;
+}
+
+.glow-primary { box-shadow: 0 0 80px 20px rgba(109, 99, 255, 0.2); }
+.card-hover { transition: transform 160ms ease, border-color 160ms ease; }
+.card-hover:hover { border-color: rgba(139, 124, 255, 0.45); transform: translateY(-2px); }
+
+.rise { animation: rise 0.7s ease both; }
+.rise-2 { animation-delay: 0.08s; }
+.rise-3 { animation-delay: 0.16s; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise, .dare-orb, .dare-card-link, .dare-btn, .dare-btn-ghost, .dare-btn-mint, .dare-btn-google {
+    animation: none !important;
+    transition: none !important;
+  }
 }

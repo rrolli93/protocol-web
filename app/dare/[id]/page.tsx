@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import AuthGuard from '@/app/components/AuthGuard'
-
-const mono = { fontFamily: "'JetBrains Mono', monospace" }
+import { dareProgress } from '@/lib/dare/present'
 
 export default function DarePage() {
   const params = useParams<{ id: string }>()
@@ -58,63 +57,85 @@ export default function DarePage() {
   }
 
   if (!dare) {
-    return <AuthGuard><div className="min-h-screen" style={{ backgroundColor: '#0A0A0F' }} /></AuthGuard>
+    return <AuthGuard><div className="dare-page" /></AuthGuard>
   }
 
   const viewer = dare.viewer as { isDoer: boolean; isFunder: boolean; isAdmin: boolean }
   const proofs = (dare.proofs as Array<Record<string, unknown>>) ?? []
+  const fundings = (dare.fundings as Array<{ funderId: string; status: string }> | undefined) ?? []
+  const funderCount = new Set(fundings.filter((row) => row.status !== 'refunded').map((row) => row.funderId)).size
+  const progress = dareProgress(String(dare.status))
+  const deadline = new Date(String(dare.deadlineAt ?? ''))
+  const deadlineLabel = Number.isNaN(deadline.getTime()) ? '—' : deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const bountyLabel = Number(dare.bountyCents) ? `CHF ${(Number(dare.bountyCents) / 100).toFixed(0)}` : 'Open'
 
   return (
     <AuthGuard>
-      <div className="min-h-screen" style={{ backgroundColor: '#0A0A0F' }}>
-        <div className="max-w-lg mx-auto px-4 py-6">
-          <p className="text-xs mb-2" style={{ color: '#6C63FF', ...mono }}>{String(dare.status).toUpperCase()} · {String(dare.mode)}</p>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: '#ffffff', ...mono }}>{String(dare.title)}</h1>
-          <p className="text-sm mb-4" style={{ color: '#8888AA' }}>{String(dare.rules)}</p>
-          <p className="text-sm mb-4" style={{ color: '#00FF87', ...mono }}>
-            Bounty {Number(dare.bountyCents) ? `CHF ${(Number(dare.bountyCents) / 100).toFixed(2)}` : 'not funded yet'}
-            {paidMode ? '' : ' · paid mode off'}
+      <div className="dare-page">
+        <div className="max-w-lg mx-auto px-4 py-8">
+          <p className="dare-kicker">{String(dare.mode)} · {String(dare.category ?? 'dare')}</p>
+          <h1 className="font-display text-4xl mt-2 mb-3" style={{ color: '#fff' }}>{String(dare.title)}</h1>
+          <p className="text-sm mb-5" style={{ color: '#c4bdd6' }}>{String(dare.rules)}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            {[
+              ['Bounty', bountyLabel],
+              ['Deadline', deadlineLabel],
+              ['Funders', String(funderCount)],
+              ['Progress', `${progress}%`],
+            ].map(([label, value]) => (
+              <div key={label} className="dare-card p-3">
+                <p className="text-[11px] uppercase tracking-wider" style={{ color: '#9d96b4' }}>{label}</p>
+                <p className="text-sm mt-1 font-medium" style={{ color: '#fff' }}>{value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="dare-bar mb-5" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Dare progress">
+            <span style={{ width: `${progress}%` }} />
+          </div>
+          <p className="text-sm mb-4" style={{ color: '#7dffe0' }}>
+            {paidMode ? 'Paid mode is on, test keys only.' : 'Paid mode is off.'}
           </p>
-          {message && <p className="text-sm mb-3" style={{ color: '#FF8C42' }}>{message}</p>}
+          {message && <p className="text-sm mb-3" style={{ color: '#ffb087' }}>{message}</p>}
           <div className="flex flex-col gap-2 mb-6">
             {viewer.isDoer && dare.status === 'accepted' && (
-              <Link href={`/dare/${id}/proof`} className="w-full py-3 rounded-xl text-center font-semibold" style={{ backgroundColor: '#6C63FF', color: '#ffffff', ...mono }}>Record proof</Link>
+              <Link href={`/dare/${id}/proof`} className="dare-btn w-full py-3">Record proof</Link>
             )}
             {viewer.isDoer && (dare.status === 'completed' || dare.status === 'paid_out') && dare.mode === 'funded' && (
-              <button onClick={connect} className="w-full py-3 rounded-xl font-semibold" style={{ backgroundColor: '#0D0D1A', color: '#ffffff', border: '1px solid #1A1A2E', ...mono }}>Set up payout</button>
+              <button type="button" onClick={connect} className="dare-btn-ghost w-full py-3">Set up payout</button>
             )}
             {viewer.isFunder && dare.status === 'completed' && (
-              <div className="rounded-xl border p-3" style={{ borderColor: '#1A1A2E' }}>
-                <textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why should this be reviewed?" className="w-full mb-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#0D0D1A', color: '#ffffff' }} />
-                <button onClick={dispute} className="w-full py-2 rounded-lg text-sm" style={{ backgroundColor: '#FF4757', color: '#ffffff', ...mono }}>Dispute within the window</button>
+              <div className="dare-card p-3">
+                <textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why should this be reviewed?" className="dare-input w-full mb-2" />
+                <button type="button" onClick={dispute} className="dare-btn-ghost w-full py-2 text-sm" style={{ color: '#ffb4bc' }}>Dispute within the window</button>
               </div>
             )}
-            {viewer.isAdmin && <button onClick={release} className="w-full py-3 rounded-xl text-sm" style={{ backgroundColor: '#1A1A2E', color: '#ffffff', ...mono }}>Run payout / refund job</button>}
+            {viewer.isAdmin && <button type="button" onClick={release} className="dare-btn-ghost w-full py-3 text-sm">Run payout / refund job</button>}
             {viewer.isAdmin && (
-              <button onClick={async () => {
+              <button type="button" onClick={async () => {
                 const response = await fetch(`/api/dares/${id}/cancel`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reason: 'Admin cancelled this dare' }) })
                 const body = await response.json()
                 setMessage(response.ok ? `Cancelled (${body.status})` : (body.error ?? 'Could not cancel'))
                 load()
-              }} className="w-full py-3 rounded-xl text-sm" style={{ backgroundColor: '#FF4757', color: '#ffffff', ...mono }}>Cancel and refund</button>
+              }} className="dare-btn-ghost w-full py-3 text-sm" style={{ color: '#ffb4bc' }}>Cancel and refund</button>
             )}
-            <div className="rounded-xl border p-3" style={{ borderColor: '#1A1A2E' }}>
-              <textarea value={report} onChange={(event) => setReport(event.target.value)} placeholder="Report this dare" className="w-full mb-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#0A0A0F', color: '#ffffff' }} />
-              <button onClick={async () => {
+            <div className="dare-card p-3">
+              <label className="dare-kicker" htmlFor="report-reason">Report</label>
+              <textarea id="report-reason" value={report} onChange={(event) => setReport(event.target.value)} placeholder="What is wrong with this dare?" className="dare-input w-full mb-2 mt-2" />
+              <button type="button" onClick={async () => {
                 const response = await fetch(`/api/dares/${id}/report`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reason: report }) })
                 const body = await response.json()
                 setMessage(response.ok ? 'Report received.' : (body.error ?? 'Could not report'))
-              }} className="w-full py-2 rounded-lg text-sm" style={{ backgroundColor: '#1A1A2E', color: '#ffffff', ...mono }}>Report</button>
+              }} className="dare-btn-ghost w-full py-2 text-sm">Report</button>
             </div>
-            <Link href={`/dare/${id}/invite`} className="text-center text-sm" style={{ color: '#6C63FF' }}>Share link</Link>
+            <Link href={`/dare/${id}/invite`} className="text-center text-sm py-2" style={{ color: '#d7d1ff' }}>Share link</Link>
           </div>
           {proofs.length > 0 && (
-            <div className="rounded-xl border p-4" style={{ backgroundColor: '#0D0D1A', borderColor: '#1A1A2E' }}>
-              <h2 className="text-xs mb-2" style={{ color: '#8888AA', ...mono }}>PROOF</h2>
+            <div className="dare-card p-4">
+              <h2 className="dare-kicker mb-2">Proof</h2>
               {proofs.map((proof) => (
-                <div key={String(proof.id)} className="text-sm mb-2" style={{ color: '#ffffff' }}>
+                <div key={String(proof.id)} className="text-sm mb-2" style={{ color: '#fff' }}>
                   <p>{String(proof.aiVerdict ?? 'pending')} · {String(proof.reviewStatus)}</p>
-                  {proof.aiRationale ? <p className="text-xs mt-1" style={{ color: '#8888AA' }}>{String(proof.aiRationale)}</p> : null}
+                  {proof.aiRationale ? <p className="text-xs mt-1" style={{ color: '#c4bdd6' }}>{String(proof.aiRationale)}</p> : null}
                   <video className="mt-2 w-full rounded-lg" controls src={`/api/proofs/${proof.id}/media`} />
                 </div>
               ))}
