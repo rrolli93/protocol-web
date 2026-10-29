@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
+import DevSwitcher from './components/DevSwitcher'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'PROTOCOL — Bet on Yourself',
-  description: 'Stake real money on your fitness goals. Win when you succeed.',
+  title: 'Dare — friends fund the challenge',
+  description: 'A friend funds a physical challenge. The doer stakes nothing. Done pays the bounty minus a fee. Missed refunds the funder.',
+  manifest: '/manifest.json',
 }
 
 export default function RootLayout({
@@ -22,6 +24,7 @@ export default function RootLayout({
         />
       </head>
       <body style={{ backgroundColor: '#0A0A0F', color: '#ffffff', fontFamily: "'Inter', sans-serif" }}>
+        <DevSwitcher />
         {children}
       </body>
     </html>

@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [notice, setNotice] = useState('')
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -99,6 +100,9 @@ export default function LoginPage() {
               />
             </div>
 
+            {notice && (
+              <p className="text-sm px-3 py-2 rounded-lg" style={{ color: '#00FF87', backgroundColor: 'rgba(0,255,135,0.08)' }}>{notice}</p>
+            )}
             {error && (
               <p
                 className="text-sm px-3 py-2 rounded-lg"
@@ -119,6 +123,34 @@ export default function LoginPage() {
               }}
             >
               {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                setError('')
+                setNotice('')
+                if (!email) { setError('Enter your email for a magic link.'); return }
+                const supabase = createClient()
+                const { error: otpError } = await supabase.auth.signInWithOtp({ email })
+                if (otpError) setError(otpError.message)
+                else setNotice('Check your email for a sign-in link.')
+              }}
+              className="w-full py-3 rounded-lg text-sm border"
+              style={{ color: '#ffffff', borderColor: '#1A1A2E', ...{ fontFamily: "'JetBrains Mono', monospace" } }}
+            >
+              Email me a magic link
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const supabase = createClient()
+                const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'google' })
+                if (oauthError) setError(oauthError.message)
+              }}
+              className="w-full py-3 rounded-lg text-sm border"
+              style={{ color: '#ffffff', borderColor: '#1A1A2E' }}
+            >
+              Continue with Google
             </button>
           </form>
         </div>

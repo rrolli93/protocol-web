@@ -257,6 +257,9 @@ export default function ChallengeInvitePage() {
       />
 
       <div className="relative z-10 max-w-lg mx-auto px-4 pt-12 pb-40">
+        <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ color: '#FF8C42', backgroundColor: 'rgba(255,140,66,0.08)' }}>
+          Parked USDC invite. Friend-funded dares use a Dare link instead, and the doer does not pay to enter.
+        </p>
 
         {/* Header — Protocol brand */}
         <div className="flex items-center justify-between mb-10">

@@ -32,17 +32,17 @@ export default function LandingPage() {
               textShadow: '0 0 40px rgba(108,99,255,0.5)',
             }}
           >
-            ⬡ PROTOCOL
+            DARE
           </h1>
           <p
             className="mt-4 text-lg md:text-2xl font-light tracking-widest"
             style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}
           >
-            Bet on yourself.
+            Friends fund the challenge.
           </p>
           <p className="mt-3 text-sm md:text-base" style={{ color: '#8888AA' }}>
-            Stake real money on your fitness goals. Win when you succeed.
-            Lose when you don't. No excuses.
+            The doer puts in no money. A funder pays a CHF bounty. Video proof decides it.
+            Done pays the doer minus a 10% fee. Missed refunds the funder.
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export default function LandingPage() {
 
         {/* Bottom copy */}
         <p className="text-xs" style={{ color: '#8888AA' }}>
-          Join thousands of challengers. Powered by USDC.
+          Paid mode stays off until you enable it with a Stripe test key. No shared pot.
         </p>
       </div>
     </main>

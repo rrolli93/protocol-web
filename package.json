@@ -1,11 +1,14 @@
 {
-  "name": "protocol-web",
+  "name": "dare-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
@@ -13,7 +16,9 @@
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "viem": "^2.21.54"
+    "stripe": "^17.7.0",
+    "viem": "^2.21.54",
+    "vitest": "^3.2.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -1,0 +1,9 @@
+{
+  "name": "Dare",
+  "short_name": "Dare",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0F",
+  "theme_color": "#0A0A0F",
+  "description": "Friends fund physical challenges. The doer stakes nothing."
+}

@@ -12,9 +12,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const PLATFORM_FEE_PCT = 0.02
 
 Deno.serve(async (req: Request) => {
-  // Allow GET (for cron) and POST (for manual trigger)
+  // Allow GET (for cron) and POST (for manual trigger). Callers must present CRON_SECRET.
   if (req.method !== 'GET' && req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 })
+  }
+
+  const cronSecret = Deno.env.get('CRON_SECRET') ?? ''
+  const authorization = req.headers.get('authorization') ?? ''
+  if (!cronSecret || authorization !== `Bearer ${cronSecret}`) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -62,6 +71,19 @@ Deno.serve(async (req: Request) => {
   // Process each challenge
   for (const challenge of allChallenges) {
     try {
+      // Claim the row before any balance updates. A second caller updates zero rows.
+      const { data: claimed, error: claimErr } = await supabase
+        .from('challenges')
+        .update({ status: 'settled' })
+        .eq('id', challenge.id)
+        .neq('status', 'settled')
+        .select('id')
+
+      if (claimErr || !claimed || claimed.length === 0) {
+        results.push({ challenge_id: challenge.id, title: challenge.title, status: 'skipped_already_settled' })
+        continue
+      }
+
       // Step (b): Fetch all participants + their current_score
       const { data: participants, error: partErr } = await supabase
         .from('challenge_participants')

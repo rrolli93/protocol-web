@@ -216,6 +216,9 @@ export default function ChallengePage() {
     <AuthGuard>
       <div className="min-h-screen pb-32" style={{ backgroundColor: '#0A0A0F' }}>
         <div className="max-w-2xl mx-auto px-4 py-6">
+          <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ color: '#FF8C42', backgroundColor: 'rgba(255,140,66,0.08)' }}>
+            This USDC challenge screen is parked. New dares live under Create. The doer does not stake money.
+          </p>
 
           {/* Back */}
           <button onClick={() => router.back()} className="text-sm mb-4" style={{ color: '#8888AA', ...mono }}>

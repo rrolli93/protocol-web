@@ -21,6 +21,13 @@ export default function AuthGuard({ children, showNav = true }: AuthGuardProps) 
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
+        const me = await fetch('/api/me')
+        if (me.ok) {
+          const body = await me.json()
+          setUsername(body.user?.handle)
+          setLoading(false)
+          return
+        }
         router.replace('/login')
         return
       }
