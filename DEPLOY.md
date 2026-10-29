@@ -103,7 +103,33 @@ DARE_EMAIL_FROM=Dare <noreply@your-domain>
 
 Resend’s free allowance is enough for a beta. If these are empty, nothing is sent.
 
-## 8. What you still do by hand
+## 8. USDC on Base Sepolia (optional, off by default)
+
+This is a second rail. Stripe stays the default. Set `CRYPTO_RAIL_ENABLED=true` only when you want the wallet UI. It defaults off. The app refuses chain id 8453 (Base mainnet) before it will ask a wallet to send a transaction.
+
+The parked `ProtocolEscrow` pooled-stake contract is not used. The rail is `contracts/src/DareEscrow.sol`. Findings and leftover risks are in `contracts/SECURITY.md`.
+
+You deploy it yourself. Nothing in CI broadcasts a transaction.
+
+```bash
+cd contracts
+forge install foundry-rs/forge-std --no-commit
+forge test
+# Base Sepolia only. Needs test ETH in the key. Do not point this at mainnet.
+export BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+export DARE_ORACLE=0xYourOracle
+export DARE_TREASURY=0xYourTreasury
+export DARE_OWNER=0xYourOwner
+forge script script/DeploySepolia.s.sol --rpc-url "$BASE_SEPOLIA_RPC_URL" --broadcast --private-key "$SEPOLIA_DEPLOYER_KEY"
+```
+
+The script reverts unless `block.chainid` is 84532. USDC is the Circle test token `0x036CbD53842c5426634e7929541eC2318f3dCF7e`.
+
+Then set `DARE_ESCROW_ADDRESS` to the logged address and `CRYPTO_RAIL_ENABLED=true`. Funders connect a wallet on Base Sepolia and deposit. The doer connects and calls `accept` (no tokens). Your oracle wallet calls `release`, `refund`, or `donate`. After the grace period, funders can `claimRefund` even if the oracle is gone.
+
+Do not put a settler private key in the Next.js app. Settlement stays a wallet transaction so this environment never holds testnet keys.
+
+## 10. What you still do by hand
 
 - Run the SQL migration.
 - Paste the keys above.

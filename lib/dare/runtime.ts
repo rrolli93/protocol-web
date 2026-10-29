@@ -1,4 +1,5 @@
 import { isAdminEmail, devStoreEnabled, paidModeEnabled, simulatedPayments, stripeMockEnabled, supabaseConfigured, type DareEnv } from './flags'
+import { cryptoRailEnabled } from './crypto'
 import { feeConfig } from './money'
 import { createMemoryRepo, type DareRepo } from './repo'
 import { createLiveStripe } from './stripe-live'
@@ -45,6 +46,9 @@ export function publicConfig(env: DareEnv = process.env) {
     currency: 'CHF' as const,
     aiFixtures: env.DARE_AI_ALLOW_FIXTURES === 'true',
     fees,
+    cryptoRail: cryptoRailEnabled(env),
+    escrowAddress: env.DARE_ESCROW_ADDRESS ?? null,
+    cryptoChainId: 84532,
   }
 }
 

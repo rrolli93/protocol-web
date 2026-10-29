@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { priceBounty, type FeeConfig } from '@/lib/dare/money'
+import CryptoRail from '@/app/components/CryptoRail'
 import type { FailOutcome } from '@/lib/dare/types'
 
 const mono = { fontFamily: "'JetBrains Mono', monospace" }
@@ -15,6 +16,8 @@ export default function InvitePage() {
   const [missing, setMissing] = useState(false)
   const [paidMode, setPaidMode] = useState(false)
   const [simulated, setSimulated] = useState(false)
+  const [cryptoRail, setCryptoRail] = useState(false)
+  const [escrowAddress, setEscrowAddress] = useState<string | null>(null)
   const [fees, setFees] = useState<FeeConfig | null>(null)
   const [failOutcome, setFailOutcome] = useState<FailOutcome>('refund')
   const [amount, setAmount] = useState(2500)
@@ -39,6 +42,8 @@ export default function InvitePage() {
     fetch('/api/config').then((response) => response.json()).then((body) => {
       setPaidMode(Boolean(body.paidMode))
       setSimulated(Boolean(body.simulatedPayments))
+      setCryptoRail(Boolean(body.cryptoRail))
+      setEscrowAddress(body.escrowAddress ?? null)
       if (body.fees) {
         setFees(body.fees)
         setAmount(body.fees.minBountyCents ?? 2000)
@@ -148,6 +153,7 @@ export default function InvitePage() {
             </button>
           </div>
         )}
+        {cryptoRail && <CryptoRail dareId={String(dare.id)} escrowAddress={escrowAddress} />}
         <div className="flex gap-2">
           <button onClick={copy} className="flex-1 py-3 rounded-xl border text-sm" style={{ borderColor: '#1A1A2E', color: '#ffffff', ...mono }}>{copied ? 'Copied' : 'Copy link'}</button>
           <Link href={`/dare/${id}`} className="flex-1 py-3 rounded-xl border text-sm text-center" style={{ borderColor: '#1A1A2E', color: '#ffffff', ...mono }}>Open dare</Link>
