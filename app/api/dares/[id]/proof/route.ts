@@ -20,6 +20,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (file.size > MAX_PROOF_BYTES) return json({ error: 'Videos are limited to 200 MB' }, 400)
   const durationS = Number(form.get('durationS') ?? 0)
   const spokenCodeWord = String(form.get('codeWord') ?? '')
+  const capture = String(form.get('capture') ?? '')
+  if (capture !== 'camera') return json({ error: 'Live camera capture is required' }, 400)
+  const startedAt = String(form.get('startedAt') ?? '')
+  const latitude = form.get('latitude') == null || form.get('latitude') === '' ? null : Number(form.get('latitude'))
+  const longitude = form.get('longitude') == null || form.get('longitude') === '' ? null : Number(form.get('longitude'))
   const fixtureRaw = String(form.get('fixture') ?? '')
   const fixture = ['pass', 'fail', 'unsure', 'injection'].includes(fixtureRaw)
     ? fixtureRaw as ProofCheckInput['fixture']
@@ -35,6 +40,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     checker: createProofChecker(),
     fixture,
     allowFixtures: aiFixturesAllowed(),
+    capture: 'camera',
+    startedAt,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
   })
   if (!result.ok) return json({ error: result.error }, result.status)
   return json({ proofId: result.data.proof.id, outcome: result.data.outcome, reviewStatus: result.data.proof.reviewStatus })

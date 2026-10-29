@@ -79,6 +79,15 @@ function dareFrom(row: Row): Dare {
     codeWord: text(row, 'code_word'),
     gesture: text(row, 'gesture'),
     disputeWindowEndsAt: text(row, 'dispute_window_ends_at'),
+    proofKind: row.proof_kind === 'strava' ? 'strava' : 'video',
+    acceptedAt: text(row, 'accepted_at'),
+    proofIssuedAt: text(row, 'proof_issued_at'),
+    strava: row.proof_kind === 'strava' ? {
+      activity: row.strava_activity === 'ride' || row.strava_activity === 'walk' || row.strava_activity === 'swim' ? row.strava_activity : 'run',
+      minDistanceM: num(row, 'strava_min_distance_m'),
+      minElevationM: row.strava_min_elevation_m == null ? null : num(row, 'strava_min_elevation_m'),
+      maxPaceSecPerKm: row.strava_max_pace_sec_per_km == null ? null : num(row, 'strava_max_pace_sec_per_km'),
+    } : null,
   }
 }
 
@@ -122,6 +131,17 @@ function proofFrom(row: Row): Proof {
     reviewedAt: text(row, 'reviewed_at'),
     repCount: row.rep_count == null ? null : Number(row.rep_count),
     cutDetected: row.cut_detected == null ? null : row.cut_detected === true,
+    kind: row.kind === 'strava' ? 'strava' : 'video',
+    latitude: row.latitude == null ? null : Number(row.latitude),
+    longitude: row.longitude == null ? null : Number(row.longitude),
+    capturedAt: text(row, 'captured_at'),
+    stravaActivityId: text(row, 'strava_activity_id'),
+    stravaName: text(row, 'strava_name'),
+    stravaDistanceM: row.strava_distance_m == null ? null : num(row, 'strava_distance_m'),
+    stravaMovingTimeS: row.strava_moving_time_s == null ? null : num(row, 'strava_moving_time_s'),
+    stravaElevationM: row.strava_elevation_m == null ? null : num(row, 'strava_elevation_m'),
+    stravaPolyline: text(row, 'strava_polyline'),
+    stravaDeviceName: text(row, 'strava_device_name'),
   }
 }
 
@@ -200,6 +220,13 @@ export function createSupabaseDareRepo(client: SupabaseClient = adminClient()): 
         code_word: dare.codeWord,
         gesture: dare.gesture,
         dispute_window_ends_at: dare.disputeWindowEndsAt,
+        proof_kind: dare.proofKind,
+        accepted_at: dare.acceptedAt,
+        proof_issued_at: dare.proofIssuedAt,
+        strava_activity: dare.strava?.activity ?? null,
+        strava_min_distance_m: dare.strava?.minDistanceM ?? null,
+        strava_min_elevation_m: dare.strava?.minElevationM ?? null,
+        strava_max_pace_sec_per_km: dare.strava?.maxPaceSecPerKm ?? null,
       })
       if (error) throw new Error(error.message)
       await db.from('events').insert({ dare_id: dare.id, type: 'dare_created', payload: { mode: dare.mode } })
@@ -252,16 +279,29 @@ export function createSupabaseDareRepo(client: SupabaseClient = adminClient()): 
       if (dareError) throw new Error(dareError.message)
       return ((rows ?? []) as Row[]).map(dareFrom)
     },
+    async listStravaOpen() {
+      const { data, error } = await db.from('dares').select('*').eq('proof_kind', 'strava').eq('status', 'accepted')
+      if (error) throw new Error(error.message)
+      return ((data ?? []) as Row[]).map(dareFrom).filter((dare) => Boolean(dare.doerId))
+    },
     async setCodeWord(dareId, codeWord, gesture) {
       const current = await this.getDare(dareId)
       if (!current) return null
       if (current.codeWord) return current
-      const { error } = await db.from('dares').update({ code_word: codeWord, gesture }).eq('id', dareId).is('code_word', null)
+      const { error } = await db.from('dares').update({
+        code_word: codeWord,
+        gesture,
+        proof_issued_at: new Date().toISOString(),
+      }).eq('id', dareId).is('code_word', null)
       if (error) throw new Error(error.message)
       return this.getDare(dareId)
     },
     async setDoer(dareId, doerId) {
-      const { data, error } = await db.from('dares').update({ doer_id: doerId, status: 'accepted' }).eq('id', dareId).eq('status', 'open').is('doer_id', null).select('id')
+      const { data, error } = await db.from('dares').update({
+        doer_id: doerId,
+        status: 'accepted',
+        accepted_at: new Date().toISOString(),
+      }).eq('id', dareId).eq('status', 'open').is('doer_id', null).select('id')
       if (error) throw new Error(error.message)
       return Array.isArray(data) && data.length > 0
     },
@@ -430,6 +470,17 @@ export function createSupabaseDareRepo(client: SupabaseClient = adminClient()): 
         code_word: proof.codeWord,
         submitted_at: proof.submittedAt,
         review_status: proof.reviewStatus,
+        kind: proof.kind ?? 'video',
+        latitude: proof.latitude ?? null,
+        longitude: proof.longitude ?? null,
+        captured_at: proof.capturedAt ?? proof.submittedAt,
+        strava_activity_id: proof.stravaActivityId ?? null,
+        strava_name: proof.stravaName ?? null,
+        strava_distance_m: proof.stravaDistanceM ?? null,
+        strava_moving_time_s: proof.stravaMovingTimeS ?? null,
+        strava_elevation_m: proof.stravaElevationM ?? null,
+        strava_polyline: proof.stravaPolyline ?? null,
+        strava_device_name: proof.stravaDeviceName ?? null,
       })
       if (error) throw new Error(error.message)
       return proof

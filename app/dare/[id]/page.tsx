@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import AuthGuard from '@/app/components/AuthGuard'
+import StravaMap from '@/app/components/StravaMap'
 import { dareProgress } from '@/lib/dare/present'
 
 export default function DarePage() {
@@ -14,6 +15,8 @@ export default function DarePage() {
   const [reason, setReason] = useState('')
   const [report, setReport] = useState('')
   const [paidMode, setPaidMode] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [stravaNote, setStravaNote] = useState('')
 
   async function load() {
     const response = await fetch(`/api/dares/${id}`)
@@ -26,6 +29,9 @@ export default function DarePage() {
     if (!id) return
     load()
     fetch('/api/config').then((response) => response.json()).then((body) => setPaidMode(Boolean(body.paidMode))).catch(() => {})
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('strava') === 'connected') setStravaNote('Strava is connected. Check for a matching activity.')
+    if (params.get('strava') === 'error') setStravaNote('Strava did not connect. Try again.')
   }, [id])
 
   async function dispute() {
@@ -47,6 +53,21 @@ export default function DarePage() {
       return
     }
     window.location.href = body.url
+  }
+
+  async function checkStrava() {
+    setChecking(true)
+    setMessage('')
+    const response = await fetch(`/api/dares/${id}/strava/check`, { method: 'POST' })
+    const body = await response.json()
+    setChecking(false)
+    if (!response.ok) {
+      setMessage(body.error ?? 'Could not check Strava')
+      return
+    }
+    if (body.verified) setMessage('Verified by Strava. A funder can still dispute.')
+    else setMessage(`No matching activity yet. Flagged without GPS: ${body.flagged ?? 0}. Rejected: ${body.rejected ?? 0}.`)
+    load()
   }
 
   async function release() {
@@ -95,9 +116,39 @@ export default function DarePage() {
           <p className="text-sm mb-4" style={{ color: '#7dffe0' }}>
             {paidMode ? 'Paid mode is on, test keys only.' : 'Paid mode is off.'}
           </p>
+          {String(dare.proofKind) === 'strava' && Boolean(dare.strava) ? (
+            <section className="dare-card p-4 mb-5">
+              <p className="dare-kicker">Strava-verified</p>
+              <p className="text-sm mt-2" style={{ color: '#c4bdd6' }}>
+                {String((dare.strava as { activity: string }).activity)} · at least {Math.round(Number((dare.strava as { minDistanceM: number }).minDistanceM) / 100) / 10} km
+                {(dare.strava as { minElevationM: number | null }).minElevationM ? ` · climb ${(dare.strava as { minElevationM: number }).minElevationM} m` : ''}
+              </p>
+              {stravaNote && <p className="text-sm mt-2" style={{ color: '#fff' }}>{stravaNote}</p>}
+              {viewer.isDoer && dare.status === 'accepted' && (
+                <div className="flex flex-col gap-2 mt-3">
+                  <a href={`/api/strava/start?next=${encodeURIComponent(`/dare/${id}`)}`} className="dare-btn-ghost py-3 text-center text-sm">Connect Strava</a>
+                  <button type="button" onClick={checkStrava} disabled={checking} className="dare-btn py-3 text-sm">{checking ? 'Checking…' : 'Check Strava'}</button>
+                </div>
+              )}
+              {(proofs as Array<Record<string, unknown>>).filter((proof) => proof.kind === 'strava').map((proof) => (
+                <div key={String(proof.id)} className="mt-4">
+                  <p className="dare-status">verified by Strava</p>
+                  <p className="font-display text-xl mt-2" style={{ color: '#fff' }}>{String(proof.stravaName ?? 'Activity')}</p>
+                  <p className="text-sm mt-1" style={{ color: '#c4bdd6' }}>
+                    {(Number(proof.stravaDistanceM) / 1000).toFixed(2)} km · {Math.round(Number(proof.stravaMovingTimeS) / 60)} min
+                    {proof.stravaDeviceName ? ` · ${String(proof.stravaDeviceName)}` : ''}
+                  </p>
+                  {proof.aiRationale ? <p className="text-xs mt-2" style={{ color: '#c4bdd6' }}>{String(proof.aiRationale)}</p> : null}
+                  <div className="mt-3">
+                    <StravaMap polyline={proof.stravaPolyline ? String(proof.stravaPolyline) : null} />
+                  </div>
+                </div>
+              ))}
+            </section>
+          ) : null}
           {message && <p className="text-sm mb-3" style={{ color: '#ffb087' }}>{message}</p>}
           <div className="flex flex-col gap-2 mb-6">
-            {viewer.isDoer && dare.status === 'accepted' && (
+            {viewer.isDoer && dare.status === 'accepted' && dare.proofKind !== 'strava' && (
               <Link href={`/dare/${id}/proof`} className="dare-btn w-full py-3">Record proof</Link>
             )}
             {viewer.isDoer && (dare.status === 'completed' || dare.status === 'paid_out') && dare.mode === 'funded' && (

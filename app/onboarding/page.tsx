@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient, PILLARS } from '@/lib/supabase'
-import { buildStravaAuthUrl } from '@/lib/strava'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -143,11 +142,10 @@ export default function OnboardingPage() {
 
             <button
               onClick={() => {
-                if (!authUserId) return
                 setStravaLoading(true)
-                window.location.href = buildStravaAuthUrl(authUserId)
+                window.location.href = '/api/strava/start?next=/onboarding'
               }}
-              disabled={stravaLoading || !authUserId}
+              disabled={stravaLoading}
               className="w-full py-3 rounded-xl font-semibold text-sm mb-3 transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
               style={{
                 backgroundColor: '#FC4C02',

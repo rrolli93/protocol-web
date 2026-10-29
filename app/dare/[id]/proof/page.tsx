@@ -11,7 +11,8 @@ export default function ProofPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const id = params.id
-  const [phrase, setPhrase] = useState<{ codeWord: string; gesture: string } | null>(null)
+  const [phrase, setPhrase] = useState<{ codeWord: string; gesture: string; issuedAt?: string | null } | null>(null)
+  const [geo, setGeo] = useState<{ latitude: number; longitude: number } | null>(null)
   const [fixtures, setFixtures] = useState(false)
   const [fixture, setFixture] = useState('')
   const [error, setError] = useState('')
@@ -49,6 +50,13 @@ export default function ProofPage() {
       return
     }
     setPhrase(body)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => setGeo({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+        () => setGeo(null),
+        { enableHighAccuracy: false, timeout: 4000, maximumAge: 60_000 },
+      )
+    }
     streamRef.current?.getTracks().forEach((track) => track.stop())
     let stream: MediaStream
     try {
@@ -99,6 +107,12 @@ export default function ProofPage() {
     const form = new FormData()
     form.set('video', file, 'proof.webm')
     form.set('codeWord', phrase.codeWord)
+    form.set('capture', 'camera')
+    form.set('startedAt', new Date(startedAt || Date.now()).toISOString())
+    if (geo) {
+      form.set('latitude', String(geo.latitude))
+      form.set('longitude', String(geo.longitude))
+    }
     form.set('durationS', String(Math.max(1, Math.min(MAX_SECONDS, Math.round((Date.now() - (startedAt || Date.now())) / 1000)))))
     if (fixture) form.set('fixture', fixture)
     const response = await fetch(`/api/dares/${id}/proof`, { method: 'POST', body: form })
@@ -115,14 +129,15 @@ export default function ProofPage() {
       <div className="min-h-screen" style={{ backgroundColor: 'transparent' }}>
         <div className="max-w-lg mx-auto px-4 py-6">
           <h1 className="text-xl font-bold mb-2" style={{ color: '#ffffff', ...mono }}>Proof</h1>
-          <p className="text-sm mb-4" style={{ color: '#8888AA' }}>
-            The code word appears when recording starts. Clips stop at {MAX_SECONDS} seconds and must be under 80 MB. Use the back camera for the attempt, or upload a file.
+          <p className="text-sm mb-4" style={{ color: '#c4bdd6' }}>
+            Live camera only. The code word is issued by the server when recording starts and must be spoken or shown. File and gallery uploads are not accepted. Location is optional.
           </p>
           {phrase && (
-            <div className="rounded-xl border p-4 mb-4" style={{ borderColor: '#6C63FF', backgroundColor: '#0D0D1A' }}>
-              <p className="text-xs" style={{ color: '#8888AA', ...mono }}>SAY THIS IN THE FIRST 10 SECONDS</p>
-              <p className="text-2xl font-bold" style={{ color: '#ffffff', ...mono }}>{phrase.codeWord}</p>
-              <p className="text-sm mt-2" style={{ color: '#00FF87' }}>{phrase.gesture}</p>
+            <div className="dare-card p-4 mb-4">
+              <p className="dare-kicker">Say this in the first 10 seconds</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: '#ffffff', ...mono }}>{phrase.codeWord}</p>
+              <p className="text-sm mt-2" style={{ color: '#7dffe0' }}>{phrase.gesture}</p>
+              {phrase.issuedAt && <p className="text-xs mt-2" style={{ color: '#c4bdd6' }}>Server time {new Date(phrase.issuedAt).toLocaleString()}</p>}
             </div>
           )}
           <video ref={videoRef} muted playsInline autoPlay className="w-full rounded-xl mb-4 bg-black aspect-[3/4] object-cover" />
@@ -146,15 +161,6 @@ export default function ProofPage() {
               <button onClick={() => upload(blob)} className="w-full py-4 rounded-xl font-semibold" style={{ backgroundColor: '#00FF87', color: '#0A0A0F', ...mono }}>Upload this clip</button>
             )}
           </div>
-          <label className="block text-xs mt-6 mb-2" style={{ color: '#8888AA', ...mono }}>UPLOAD A FILE AFTER THE CODE WORD IS SHOWN</label>
-          <input type="file" accept="video/*" capture="environment" onChange={(event) => {
-            const file = event.target.files?.[0]
-            if (!phrase) {
-              setError('Tap start once so the code word is issued, then upload.')
-              return
-            }
-            if (file) upload(file)
-          }} className="text-sm w-full" style={{ color: '#8888AA' }} />
           {fixtures && (
             <label className="block mt-4 text-xs" style={{ color: '#8888AA' }}>
               Dev fixture

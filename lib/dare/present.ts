@@ -49,6 +49,9 @@ export async function presentDare(dare: Dare, repo: DareRepo, viewer: User | nul
     disputeWindowEndsAt: dare.disputeWindowEndsAt,
     codeWord: isDoer ? dare.codeWord : null,
     gesture: isDoer ? dare.gesture : null,
+    proofKind: dare.proofKind,
+    acceptedAt: dare.acceptedAt,
+    strava: dare.strava,
     sharePath: `/dare/${dare.id}/invite`,
     viewer: { isDoer, isCreator, isFunder, isAdmin },
     proofs: proofs.map((proof) => ({
@@ -60,6 +63,17 @@ export async function presentDare(dare: Dare, repo: DareRepo, viewer: User | nul
       aiModel: proof.aiModel,
       submittedAt: proof.submittedAt,
       durationS: proof.durationS,
+      kind: proof.kind ?? 'video',
+      capturedAt: proof.capturedAt ?? proof.submittedAt,
+      latitude: proof.latitude ?? null,
+      longitude: proof.longitude ?? null,
+      stravaActivityId: proof.stravaActivityId ?? null,
+      stravaName: proof.stravaName ?? null,
+      stravaDistanceM: proof.stravaDistanceM ?? null,
+      stravaMovingTimeS: proof.stravaMovingTimeS ?? null,
+      stravaElevationM: proof.stravaElevationM ?? null,
+      stravaPolyline: proof.stravaPolyline ?? null,
+      stravaDeviceName: proof.stravaDeviceName ?? null,
     })),
     fundings: involved
       ? fundings.map((row) => ({

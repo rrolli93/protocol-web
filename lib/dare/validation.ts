@@ -1,4 +1,5 @@
-import type { DareCategory, DareMode } from './types'
+import type { DareCategory, DareMode, StravaSport } from './types'
+import { STRAVA_SPORTS } from './strava-match'
 
 export const CATEGORIES: DareCategory[] = ['fitness', 'skills', 'habits']
 
@@ -52,6 +53,11 @@ export interface CreateDareInput {
   pledgeCents?: number | null
   creatorIsDoer?: boolean
   failOutcome?: 'refund' | 'charity'
+  proofKind?: string
+  stravaActivity?: string
+  minDistanceM?: number | null
+  minElevationM?: number | null
+  maxPaceSecPerKm?: number | null
 }
 
 export interface ValidDareDraft {
@@ -65,6 +71,11 @@ export interface ValidDareDraft {
   pledgeCents: number | null
   creatorIsDoer: boolean
   failOutcome: 'refund' | 'charity'
+  proofKind: 'video' | 'strava'
+  stravaActivity: StravaSport | null
+  minDistanceM: number | null
+  minElevationM: number | null
+  maxPaceSecPerKm: number | null
 }
 
 const HOUR_MS = 60 * 60 * 1000
@@ -134,6 +145,34 @@ export function validateCreateDare(input: CreateDareInput, now = new Date()): { 
   if (input.mode === 'funded' && pledge) {
     return { ok: false, error: 'The doer does not put money in. A funder pays the bounty.' }
   }
+  const proofKind = input.proofKind === 'strava' ? 'strava' : 'video'
+  let stravaActivity: StravaSport | null = null
+  let minDistanceM: number | null = null
+  let minElevationM: number | null = null
+  let maxPaceSecPerKm: number | null = null
+  if (proofKind === 'strava') {
+    if (input.category !== 'fitness') return { ok: false, error: 'Strava verification is only for fitness dares' }
+    if (!STRAVA_SPORTS.includes(input.stravaActivity as StravaSport)) {
+      return { ok: false, error: 'Pick a Strava activity: run, ride, walk, or swim' }
+    }
+    stravaActivity = input.stravaActivity as StravaSport
+    minDistanceM = Number(input.minDistanceM)
+    if (!Number.isFinite(minDistanceM) || minDistanceM < 100 || minDistanceM > 200_000) {
+      return { ok: false, error: 'Minimum distance must be between 0.1 km and 200 km' }
+    }
+    if (input.minElevationM != null && input.minElevationM !== 0) {
+      minElevationM = Number(input.minElevationM)
+      if (!Number.isFinite(minElevationM) || minElevationM < 1 || minElevationM > 20_000) {
+        return { ok: false, error: 'Minimum climb must be between 1 m and 20000 m' }
+      }
+    }
+    if (input.maxPaceSecPerKm != null && input.maxPaceSecPerKm !== 0) {
+      maxPaceSecPerKm = Number(input.maxPaceSecPerKm)
+      if (!Number.isFinite(maxPaceSecPerKm) || maxPaceSecPerKm < 120 || maxPaceSecPerKm > 1800) {
+        return { ok: false, error: 'Pace limit must be between 2:00 and 30:00 per km' }
+      }
+    }
+  }
   return {
     ok: true,
     value: {
@@ -147,6 +186,11 @@ export function validateCreateDare(input: CreateDareInput, now = new Date()): { 
       pledgeCents: input.mode === 'solo' ? pledge : null,
       creatorIsDoer: Boolean(input.creatorIsDoer),
       failOutcome: input.mode === 'solo' ? 'charity' : failOutcome,
+      proofKind,
+      stravaActivity,
+      minDistanceM,
+      minElevationM,
+      maxPaceSecPerKm,
     },
   }
 }

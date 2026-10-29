@@ -1,73 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server'
+import { exchangeStravaCode } from '@/lib/strava'
+import { safeStravaNext } from '@/lib/dare/strava-oauth'
+import { saveStravaConnection } from '@/lib/dare/strava-store'
+import { currentUser } from '@/lib/dare/http'
+import { readOAuthCookie } from '../start/route'
 
-export const maxDuration = 10; // 10s timeout for Vercel
+function done(origin: string, next: string, query: string) {
+  const path = safeStravaNext(next)
+  const join = path.includes('?') ? '&' : '?'
+  const response = NextResponse.redirect(new URL(`${path}${join}${query}`, origin))
+  response.cookies.set('strava_oauth_state', '', { path: '/', maxAge: 0 })
+  response.cookies.set('strava_oauth_user', '', { path: '/', maxAge: 0 })
+  response.cookies.set('strava_oauth_next', '', { path: '/', maxAge: 0 })
+  return response
+}
 
-const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID!;
-const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get('code');
-  const error = searchParams.get('error');
-  const state = searchParams.get('state');
-
-  if (error || !code || !state) {
-    return NextResponse.redirect(new URL('/profile?strava=error&reason=missing_params', request.url));
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const code = url.searchParams.get('code')
+  const error = url.searchParams.get('error')
+  const state = url.searchParams.get('state') ?? ''
+  const pending = await readOAuthCookie()
+  if (error || !code || !state || state !== pending.state || !pending.userId) {
+    return done(url.origin, pending.next, 'strava=error&reason=missing_params')
   }
-
-  // Exchange code for tokens with explicit timeout
-  let tokens;
+  const session = await currentUser()
+  if (!session || session.id !== pending.userId) {
+    return done(url.origin, pending.next, 'strava=error&reason=auth')
+  }
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    const tokenRes = await fetch('https://www.strava.com/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: STRAVA_CLIENT_ID,
-        client_secret: STRAVA_CLIENT_SECRET,
-        code,
-        grant_type: 'authorization_code',
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    if (!tokenRes.ok) {
-      const body = await tokenRes.text();
-      return NextResponse.redirect(new URL(`/profile?strava=error&reason=token_${tokenRes.status}`, request.url));
-    }
-    tokens = await tokenRes.json();
-  } catch (e) {
-    return NextResponse.redirect(new URL('/profile?strava=error&reason=fetch_failed', request.url));
+    const tokens = await exchangeStravaCode(code)
+    await saveStravaConnection({
+      userId: session.id,
+      athleteId: String(tokens.athlete?.id ?? ''),
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt: new Date(tokens.expires_at * 1000).toISOString(),
+      scope: tokens.scope || 'activity:read_all',
+      demo: false,
+    })
+  } catch {
+    return done(url.origin, pending.next, 'strava=error&reason=token')
   }
-
-  const { currentUser } = await import('@/lib/dare/http');
-  const sessionUser = await currentUser();
-  if (!sessionUser || sessionUser.id !== state) {
-    return NextResponse.redirect(new URL('/profile?strava=error&reason=auth', request.url));
-  }
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
-  await supabase.from('user_integrations').upsert({
-    user_id: state,
-    provider: 'strava',
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expires_at: new Date(tokens.expires_at * 1000).toISOString(),
-    scope: tokens.token_type,
-    provider_user_id: tokens.athlete?.id?.toString(),
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,provider' });
-
-  await supabase.from('users')
-    .update({ strava_connected: true, updated_at: new Date().toISOString() })
-    .eq('id', state);
-
-  return NextResponse.redirect(new URL('/profile?strava=connected', request.url));
+  return done(url.origin, pending.next, 'strava=connected')
 }

@@ -1,38 +1,66 @@
-// Strava OAuth helpers — secret is server-side only
+/** Strava OAuth helpers. The client secret never leaves the server. */
 
-export const STRAVA_CLIENT_ID = '223306';
-const REDIRECT_URI = 'https://protocol-web-theta.vercel.app/api/strava/callback';
-
-export function buildStravaAuthUrl(userId: string): string {
-  const params = new URLSearchParams({
-    client_id: STRAVA_CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
-    response_type: 'code',
-    approval_prompt: 'auto',
-    scope: 'activity:read_all',
-    state: userId, // passed back in callback so we know which user to save
-  });
-  return `https://www.strava.com/oauth/authorize?${params.toString()}`;
+export function stravaClientId(): string {
+  return process.env.STRAVA_CLIENT_ID || process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID || ''
 }
 
-export interface StravaActivity {
-  id: number;
-  name: string;
-  type: string;
-  distance: number;
-  moving_time: number;
-  start_date: string;
+/** Must match the domain registered in the Strava app: protocol-web-theta.vercel.app */
+export function stravaCallbackUrl(): string {
+  if (process.env.STRAVA_REDIRECT_URI) return process.env.STRAVA_REDIRECT_URI
+  const app = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')
+  if (app) return `${app}/api/strava/callback`
+  return 'https://protocol-web-theta.vercel.app/api/strava/callback'
 }
 
-export async function getRecentActivities(accessToken: string, perPage = 30): Promise<StravaActivity[]> {
-  const res = await fetch(
-    `https://www.strava.com/api/v3/athlete/activities?per_page=${perPage}&page=1`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  if (!res.ok) throw new Error(`Strava fetch failed: ${res.status}`);
-  return res.json();
+export interface StravaTokenResponse {
+  access_token: string
+  refresh_token: string
+  expires_at: number
+  athlete?: { id?: number }
+  scope?: string
 }
 
-export function metresToKm(m: number): number {
-  return Math.round((m / 1000) * 100) / 100;
+export async function exchangeStravaCode(code: string, fetchImpl: typeof fetch = fetch): Promise<StravaTokenResponse> {
+  const clientId = stravaClientId()
+  const secret = process.env.STRAVA_CLIENT_SECRET
+  if (!clientId || !secret) throw new Error('Strava client is not configured')
+  const response = await fetchImpl('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: secret,
+      code,
+      grant_type: 'authorization_code',
+    }),
+  })
+  if (!response.ok) throw new Error(`Strava token exchange failed (${response.status})`)
+  return response.json() as Promise<StravaTokenResponse>
+}
+
+export async function refreshStravaToken(refreshToken: string, fetchImpl: typeof fetch = fetch): Promise<StravaTokenResponse> {
+  const clientId = stravaClientId()
+  const secret = process.env.STRAVA_CLIENT_SECRET
+  if (!clientId || !secret) throw new Error('Strava client is not configured')
+  const response = await fetchImpl('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: secret,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    }),
+  })
+  if (!response.ok) throw new Error(`Strava refresh failed (${response.status})`)
+  return response.json() as Promise<StravaTokenResponse>
+}
+
+export async function fetchStravaActivities(accessToken: string, afterUnix: number, fetchImpl: typeof fetch = fetch) {
+  const response = await fetchImpl(
+    `https://www.strava.com/api/v3/athlete/activities?after=${afterUnix}&per_page=50`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  )
+  if (!response.ok) throw new Error(`Strava activities failed (${response.status})`)
+  return response.json()
 }

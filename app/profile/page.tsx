@@ -7,7 +7,6 @@ import AuthGuard from '@/app/components/AuthGuard'
 import ChallengeCard from '@/app/components/ChallengeCard'
 import DareCard, { type DareCardData } from '@/app/components/DareCard'
 import StatsRow from '@/app/components/StatsRow'
-import { buildStravaAuthUrl } from '@/lib/strava'
 import { buildOuraAuthUrl } from '@/lib/oura'
 
 interface Profile {
@@ -270,11 +269,10 @@ function ProfilePageInner() {
                     ) : (
                       <button
                         onClick={() => {
-                          if (!authUserId) return
                           setStravaLoading(true)
-                          window.location.href = buildStravaAuthUrl(authUserId)
+                          window.location.href = '/api/strava/start?next=/profile'
                         }}
-                        disabled={stravaLoading || !authUserId}
+                        disabled={stravaLoading}
                         className="px-3 py-1 rounded-lg text-xs border transition-all active:scale-95"
                         style={{
                           color: stravaLoading ? '#8888AA' : '#FC4C02',
