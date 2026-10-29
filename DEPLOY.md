@@ -9,6 +9,7 @@ If you deploy with no keys, the app runs in demo mode: an in-memory store, a dem
 1. Create a project at [supabase.com](https://supabase.com).
 2. Open the SQL editor and run, in order:
    - `supabase/migrations/20261029_dare_mvp.sql`
+   - `supabase/migrations/20261029_strava_anticheat.sql`
 3. In Project Settings → API, copy:
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - anon public key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -86,6 +87,33 @@ Vercel Hobby cron can call these once a day. Send `Authorization: Bearer <CRON_S
 - `POST /api/jobs/expire` — deadline passed with no proof → refund or charity mark
 - `POST /api/jobs/release` — pay approved dares, retry a payout if Stripe failed mid-way
 - `POST /api/jobs/retention` — delete proof rows older than 90 days
+- `POST /api/jobs/strava` — check accepted Strava dares and verify a matching activity
+
+## 4b. Strava (free API)
+
+The Vercel project already has `NEXT_PUBLIC_STRAVA_CLIENT_ID`, `STRAVA_CLIENT_ID`, and `STRAVA_CLIENT_SECRET`. Reuse those names. Do not put the secret in a `NEXT_PUBLIC_` variable.
+
+1. Open [Strava API settings](https://www.strava.com/settings/api) for the existing Dare/Protocol application.
+2. Authorization Callback Domain: `protocol-web-theta.vercel.app`
+   - Domain only. No `https://` and no path.
+3. The callback Dare sends is exactly:
+   - `https://protocol-web-theta.vercel.app/api/strava/callback`
+4. Set `NEXT_PUBLIC_APP_URL=https://protocol-web-theta.vercel.app` so that callback is what the authorize request uses. Override with `STRAVA_REDIRECT_URI` only if the domain changes.
+5. Scope is `activity:read_all`. `activity:read` only returns activities visible to Everyone. A dare is usually followers-only or private, so those would never match. Dare does not request write scopes.
+6. Apply `supabase/migrations/20261029_strava_anticheat.sql`. Tokens live in `strava_connections`. Row level security is on and there is no policy for signed-in users, so only the service role can read tokens.
+7. Optional push updates. Create a webhook subscription (the verify token is `CRON_SECRET`, or set `STRAVA_WEBHOOK_VERIFY_TOKEN` to the same value you send Strava):
+
+```bash
+curl -X POST https://www.strava.com/api/v3/push_subscriptions \
+  -F client_id=$STRAVA_CLIENT_ID \
+  -F client_secret=$STRAVA_CLIENT_SECRET \
+  -F callback_url=https://protocol-web-theta.vercel.app/api/strava/webhook \
+  -F verify_token=$CRON_SECRET
+```
+
+Until that subscription exists, `POST /api/jobs/strava` with `Authorization: Bearer <CRON_SECRET>` does the same check. The doer can also press “Check Strava” on the dare.
+
+Manual Strava entries are rejected. Activities with no GPS polyline are flagged and not treated as proof. When several activities match, a named device is preferred. A funder can still dispute a verified dare during the window.
 
 Example `vercel.json` crons can be added later. Until then, an admin can press “Run payout / refund job” on a dare, or you can curl the routes.
 

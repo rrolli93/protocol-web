@@ -16,7 +16,7 @@ export async function issueProofChallenge(dareId: string, user: User, repo: Dare
   if (dare.status !== 'accepted') return fail(409, 'This dare is not ready for proof')
   const stored = await repo.setCodeWord(dareId, phrase.codeWord, phrase.gesture)
   if (!stored?.codeWord || !stored.gesture) return fail(500, 'Could not store the code word')
-  return ok({ codeWord: stored.codeWord, gesture: stored.gesture })
+  return ok({ codeWord: stored.codeWord, gesture: stored.gesture, issuedAt: stored.proofIssuedAt })
 }
 
 export async function submitProof(args: {
@@ -31,14 +31,28 @@ export async function submitProof(args: {
   fixture?: ProofCheckInput['fixture']
   allowFixtures?: boolean
   transcript?: string
+  capture?: 'camera' | 'file'
+  startedAt?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }): Promise<Result<{ proof: Proof; outcome: string }>> {
   const now = args.now ?? new Date()
   const dare = await args.repo.getDare(args.dareId)
   if (!dare) return fail(404, 'Dare not found')
+  if (dare.proofKind === 'strava') return fail(409, 'This dare is checked from Strava, not a video upload')
   if (dare.doerId !== args.user.id) return fail(403, 'Only the doer can submit proof')
   if (dare.status !== 'accepted') return fail(409, 'Proof is not open on this dare')
   if (new Date(dare.deadlineAt).getTime() < now.getTime()) return fail(409, 'The deadline has passed')
   if (!dare.codeWord || !dare.gesture) return fail(400, 'Start recording so a code word can be shown')
+  if (args.capture === 'file') return fail(400, 'Live camera capture is required')
+  if (args.startedAt && dare.proofIssuedAt) {
+    const started = new Date(args.startedAt).getTime()
+    const issued = new Date(dare.proofIssuedAt).getTime()
+    if (Number.isNaN(started) || started + 20_000 < issued) {
+      return fail(400, 'Recording started before the challenge code was issued')
+    }
+    if (started > now.getTime() + 20_000) return fail(400, 'Recording time is in the future')
+  }
   if (args.spokenCodeWord.trim().toLowerCase() !== dare.codeWord.toLowerCase()) {
     return fail(400, 'The code word does not match the one shown at record start')
   }
@@ -66,6 +80,10 @@ export async function submitProof(args: {
     reviewedAt: null,
     repCount: null,
     cutDetected: null,
+    kind: 'video',
+    latitude: args.latitude ?? null,
+    longitude: args.longitude ?? null,
+    capturedAt: now.toISOString(),
   }
   await args.repo.createProof(proof)
   await args.repo.saveMedia(proof.id, args.bytes)

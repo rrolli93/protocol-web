@@ -29,6 +29,11 @@ export default function CreatePage() {
   const [loading, setLoading] = useState(false)
   const [sharePath, setSharePath] = useState('')
   const [copied, setCopied] = useState(false)
+  const [proofKind, setProofKind] = useState<'video' | 'strava'>('video')
+  const [stravaActivity, setStravaActivity] = useState('run')
+  const [distanceKm, setDistanceKm] = useState('5')
+  const [elevationM, setElevationM] = useState('')
+  const [pace, setPace] = useState('')
 
   useEffect(() => {
     const when = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -58,6 +63,13 @@ export default function CreatePage() {
         charityId: mode === 'solo' || missToCharity ? charityId : null,
         failOutcome: mode === 'funded' && missToCharity ? 'charity' : 'refund',
         pledgeCents: mode === 'solo' && pledge > 0 ? pledge : null,
+        proofKind: category === 'fitness' ? proofKind : 'video',
+        stravaActivity,
+        minDistanceM: Math.round(Number(distanceKm) * 1000),
+        minElevationM: elevationM.trim() ? Number(elevationM) : null,
+        maxPaceSecPerKm: pace.trim().includes(':')
+          ? Number(pace.split(':')[0]) * 60 + Number(pace.split(':')[1])
+          : pace.trim() ? Math.round(Number(pace) * 60) : null,
       }),
     })
     const body = await response.json()
@@ -136,6 +148,36 @@ export default function CreatePage() {
                   </button>
                 ))}
               </div>
+              {category === 'fitness' && (
+                <div className="mb-4 flex flex-col gap-3">
+                  <p className="dare-kicker">How is it proved?</p>
+                  <button type="button" onClick={() => setProofKind('video')} className="dare-card p-4 text-left" style={{ boxShadow: proofKind === 'video' ? '0 0 0 1px #b1a6ff' : undefined }}>
+                    <p className="font-semibold" style={{ color: '#fff' }}>Live camera</p>
+                    <p className="text-sm mt-1" style={{ color: '#c4bdd6' }}>Recorded in the app. A code word is shown at the start. Gallery uploads are not accepted.</p>
+                  </button>
+                  <button type="button" onClick={() => setProofKind('strava')} className="dare-card p-4 text-left" style={{ boxShadow: proofKind === 'strava' ? '0 0 0 1px #b1a6ff' : undefined }}>
+                    <p className="font-semibold" style={{ color: '#fff' }}>Strava-verified</p>
+                    <p className="text-sm mt-1" style={{ color: '#c4bdd6' }}>A device activity after they accept, before the deadline. Manual entries do not count.</p>
+                  </button>
+                  {proofKind === 'strava' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="dare-kicker col-span-2">Activity</label>
+                      <select value={stravaActivity} onChange={(event) => setStravaActivity(event.target.value)} className="dare-input col-span-2">
+                        <option value="run">Run</option>
+                        <option value="ride">Ride</option>
+                        <option value="walk">Walk or hike</option>
+                        <option value="swim">Swim</option>
+                      </select>
+                      <label className="dare-kicker col-span-2">Minimum distance (km)</label>
+                      <input value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} inputMode="decimal" className="dare-input col-span-2" />
+                      <label className="dare-kicker">Optional climb (m)</label>
+                      <label className="dare-kicker">Optional pace (min/km)</label>
+                      <input value={elevationM} onChange={(event) => setElevationM(event.target.value)} placeholder="none" className="dare-input" />
+                      <input value={pace} onChange={(event) => setPace(event.target.value)} placeholder="6:00" className="dare-input" />
+                    </div>
+                  )}
+                </div>
+              )}
               <button type="button" disabled={!category} onClick={() => setStep(2)} className="dare-btn w-full py-3">Continue</button>
             </div>
           )}

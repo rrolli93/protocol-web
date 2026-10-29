@@ -36,6 +36,15 @@ export async function createDareForUser(input: CreateDareInput, user: User, repo
     codeWord: null,
     gesture: null,
     disputeWindowEndsAt: null,
+    proofKind: parsed.value.proofKind,
+    acceptedAt: creatorIsDoer ? now.toISOString() : null,
+    proofIssuedAt: null,
+    strava: parsed.value.proofKind === 'strava' && parsed.value.stravaActivity ? {
+      activity: parsed.value.stravaActivity,
+      minDistanceM: parsed.value.minDistanceM ?? 0,
+      minElevationM: parsed.value.minElevationM,
+      maxPaceSecPerKm: parsed.value.maxPaceSecPerKm,
+    } : null,
   }
   await repo.createDare(dare)
   return ok(dare)

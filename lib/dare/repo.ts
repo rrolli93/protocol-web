@@ -49,6 +49,7 @@ export interface DareRepo {
   listSettleable(now: Date): Promise<Dare[]>
   listPayoutRetries(): Promise<Dare[]>
   listRefundRetries(): Promise<Dare[]>
+  listStravaOpen(): Promise<Dare[]>
   setCodeWord(dareId: string, codeWord: string, gesture: string): Promise<Dare | null>
   setDoer(dareId: string, doerId: string): Promise<boolean>
   setDisputeWindow(dareId: string, endsAt: string | null): Promise<void>
@@ -202,12 +203,16 @@ export function createMemoryRepo(options?: { seedDemo?: boolean }): DareRepo {
         return [...fundings.values()].some((row) => row.dareId === dare.id && (row.status === 'captured' || (row.status === 'pending' && row.captureMethod === 'manual' && row.stripePaymentIntentId)))
       })
     },
+    async listStravaOpen() {
+      return [...dares.values()].filter((dare) => dare.proofKind === 'strava' && dare.status === 'accepted' && Boolean(dare.doerId))
+    },
     async setCodeWord(dareId, codeWord, gesture) {
       const dare = dares.get(dareId)
       if (!dare) return null
       if (!dare.codeWord) {
         dare.codeWord = codeWord
         dare.gesture = gesture
+        dare.proofIssuedAt = new Date().toISOString()
       }
       return dare
     },
@@ -219,6 +224,7 @@ export function createMemoryRepo(options?: { seedDemo?: boolean }): DareRepo {
       }
       dare.doerId = doerId
       dare.status = 'accepted'
+      dare.acceptedAt = new Date().toISOString()
       log(dareId, 'accepted', { doerId })
       return true
     },
@@ -504,6 +510,10 @@ export function createMemoryRepo(options?: { seedDemo?: boolean }): DareRepo {
       codeWord: null,
       gesture: null,
       disputeWindowEndsAt: null,
+      proofKind: 'video',
+      acceptedAt: createdAt,
+      proofIssuedAt: null,
+      strava: null,
     })
     void api.createFunding({
       id: '44444444-4444-4444-8444-444444444444',

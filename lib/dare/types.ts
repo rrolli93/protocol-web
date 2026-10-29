@@ -23,6 +23,15 @@ export type AiVerdict = 'pass' | 'fail' | 'unsure'
 export type ReviewStatus = 'none' | 'pending' | 'approved' | 'rejected'
 export type PayoutStatus = 'pending' | 'transferred' | 'failed'
 export type DisputeStatus = 'open' | 'resolved'
+export type StravaSport = 'run' | 'ride' | 'walk' | 'swim'
+export type ProofKind = 'video' | 'strava'
+
+export interface StravaDareRule {
+  activity: StravaSport
+  minDistanceM: number
+  minElevationM: number | null
+  maxPaceSecPerKm: number | null
+}
 
 export interface ProofRequirements {
   continuous: boolean
@@ -63,6 +72,10 @@ export interface Dare {
   codeWord: string | null
   gesture: string | null
   disputeWindowEndsAt: string | null
+  proofKind: ProofKind
+  acceptedAt: string | null
+  proofIssuedAt: string | null
+  strava: StravaDareRule | null
 }
 
 export interface Funding {
@@ -104,6 +117,17 @@ export interface Proof {
   reviewedAt: string | null
   repCount: number | null
   cutDetected: boolean | null
+  kind?: ProofKind
+  latitude?: number | null
+  longitude?: number | null
+  capturedAt?: string | null
+  stravaActivityId?: string | null
+  stravaName?: string | null
+  stravaDistanceM?: number | null
+  stravaMovingTimeS?: number | null
+  stravaElevationM?: number | null
+  stravaPolyline?: string | null
+  stravaDeviceName?: string | null
 }
 
 export interface Dispute {
